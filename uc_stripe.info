@@ -1,0 +1,10 @@
+name = Stripe
+description = A gateway used to process payments using Stripe.
+dependencies[] = uc_payment
+dependencies[] = uc_credit
+dependencies[] = libraries
+dependencies[] = uc_optional_checkout_review
+package = Ubercart - payment
+core = 6.x
+php = 5.2
+
