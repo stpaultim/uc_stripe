@@ -46,3 +46,27 @@ uc_stripe 6.x-2.x was based on Bitcookie's work (thanks!) which was posted at
 http://bitcookie.com/blog/pci-compliant-ubercart-and-stripe-js
 from discussion in the uc_stripe issue queue,
 https://www.drupal.org/node/1467886
+
+Subscription Cleanup from v1 Stripe Subscriptions
+=================================================
+
+The 6.x-1.x version of this module created subscriptions on the Stripe side,
+which were then not manageable from within Ubercart. 6.x-2.x changes this
+and manages recurring fees itself.
+
+However, this means that if you're upgrading you have Stripe subscriptions
+which will be charged on their end... and you're also going to charge them
+within Ubercart. This could make customers uneasy :)
+
+There is a Drush command to cancel subscriptions that are listed in the
+uc_recurring_stripe table.
+
+drush subscription-cancel --help
+drush subscription-cancel --dry-run
+drush subscription-cancel
+
+Dropping the obsolete uc_recurring_stripe table should be done when you are
+ready. Because it may contain key information it's not done by the update
+process. You can delete it with this SQL command:
+
+DROP TABLE uc_recurring_stripe;
