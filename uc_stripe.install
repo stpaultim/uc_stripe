@@ -37,17 +37,6 @@ function uc_stripe_requirements($phase) {
     $requirements['uc_stripe_keys']['description'] = $t('The Stripe API keys are not fully configured.');
   }
 
-  if ($phase == 'runtime' &&
-    (!variable_get('uc_checkout_skip_review', FALSE)
-    || !module_exists('uc_optional_checkout_review')
-    || variable_get('uc_credit_validate_numbers', FALSE))
-    ) {
-    $requirements['uc_stripe_config']['title'] = $t('Ubercart Configuration for Stripe.');
-    $requirements['uc_stripe_config']['value'] = $t('Incorrect');
-    $requirements['uc_stripe_config']['severity'] = REQUIREMENT_ERROR;
-    $requirements['uc_stripe_config']['description'] = $t('For PCI-DSS compliance, Ubercart Checkout Skip Review must be enabled and uc_credit credit card number validation must be disabled.');
-  }
-
   return $requirements;
 }
 
@@ -60,7 +49,7 @@ function _uc_stripe_load_api() {
   $path = libraries_get_path('stripe');
   $loaded = @include_once $path . '/lib/Stripe.php';
   if (empty($path) || empty($loaded)) {
-    watchdog('uc_stripe', 'Stripe PHP API Library not found. Please install into sites/all/libraries/stripe', array(), WATCHDOG_ERROR);
+    watchdog('uc_stripe', 'Stripe PHP API Library not found. Please install into libraries directory, usually sites/all/libraries/stripe', array(), WATCHDOG_ERROR);
     return FALSE;
   }
   return TRUE;
@@ -86,68 +75,82 @@ function uc_stripe_install() {
 /**
  * Enable triggered renewals, as uc_recurring manages renewals with this version.
  */
-function uc_stripe_update_6201(&$sandbox) {
+function uc_stripe_update_7201(&$sandbox) {
   variable_set('uc_recurring_trigger_renewals', TRUE);
-  variable_set('uc_checkout_skip_review', TRUE);
   variable_set('uc_credit_validate_numbers', FALSE);
 
-  module_enable('uc_optional_checkout_review');
-
-  return array('#vset' => array('success' => TRUE, 'query' => 'Enabled uc_recurring triggered renewals (uc_recurring_trigger_renewals) and required uc_checkout_skip_review'));
+  return 'Enabled uc_recurring triggered renewals (uc_recurring_trigger_renewals) and required uc_checkout_skip_review';
 }
 
 /**
  * Move customer IDs from uc_recurring_stripe into account
- * @return string
  */
-function uc_stripe_update_6202(&$sandbox) {
+function uc_stripe_update_7202(&$sandbox) {
   $ret = array();
-  $sandbox['per_run'] = 10;  // users per run
+  $sandbox['per_run'] = 100;  // users per run
+  $sandbox['#finished'] = 0;
 
   if (db_table_exists('uc_recurring_stripe')) {
     if (!isset($sandbox['progress'])) {
       $sandbox['progress'] = 0;
-      $sandbox['max'] = db_result(db_query('SELECT COUNT(rfid)
-      FROM {uc_recurring_stripe} urs
-      WHERE urs.rfid IN (
-        SELECT max(sq.rfid) FROM {uc_recurring_stripe} sq WHERE sq.uid=urs.uid AND active=1
-     )'));
+      $sandbox['max'] = db_query('
+        SELECT COUNT(DISTINCT(u.uid))
+        FROM {users} u JOIN {uc_recurring_stripe} urs
+        ON (u.uid = urs.uid)
+        WHERE urs.active = 1
+    ')->fetchField();
     }
-    $ret = _uc_stripe_move_customer_id($sandbox);
-    return $ret;
+
+
+    _uc_stripe_move_customer_id($sandbox);
+    return "Updated {$sandbox['progress']} of {$sandbox['max']} uc_recurring_stripe rows into user objects";
   }
-  return array('#done' => array('success' => TRUE, 'query' => 'Old uc_recurring_stripe table did not exist, no action taken.'));
+  else {
+    return 'Old uc_recurring_stripe table did not exist, no action taken.';
+  }
 }
 
 /**
  * Move customer ids from uc_recurring_stripe into user account
  */
 function _uc_stripe_move_customer_id(&$sandbox) {
-  $ret = array();
 
+  // Find the users with stripe customer ids that are active
   $query = '
-    SELECT rfid, uid, customer_id
-    FROM {uc_recurring_stripe} urs
-    WHERE urs.rfid IN (
-      SELECT max(sq.rfid) FROM {uc_recurring_stripe} sq WHERE sq.uid=urs.uid AND active=1
-    )
-    ';
+    SELECT DISTINCT(urs.uid)
+    FROM {users} u JOIN {uc_recurring_stripe} urs
+    ON (u.uid = urs.uid)
+    WHERE urs.active = 1';
+  $result = db_query_range($query, 0, $sandbox['per_run'],
+    array(),
+    array('fetch' => PDO::FETCH_ASSOC));
 
-  $result = db_query_range($query, $sandbox['progress'], $sandbox['per_run']);
-  $count = $visited = 0;
-  while ($item = db_fetch_array($result)) {
+  foreach ($result as $item) {
+
+    $sandbox['progress']++;
+    $stripe_customer_id = db_query_range('
+      SELECT urs.customer_id
+      FROM {uc_recurring_stripe} urs
+      WHERE urs.uid = :uid AND urs.active = 1
+      ORDER BY urs.rfid DESC
+      ', 0, 1, array(':uid' => $item['uid']))->fetchField();
     $account = user_load($item['uid']);
-    $visited++;
-    $ret[] = array('success' => TRUE, 'query' => "Updated account {$account->name} uid={$account->uid}");
-    if (empty($account->uc_stripe_customer_id)) {
-      user_save($account, array('uc_stripe_customer_id' => $item['customer_id']));
-      $count++;
+    // Set to inactive every subscription for this uid
+    db_update('uc_recurring_stripe')
+      ->fields(
+        array('active' => 0)
+      )
+      ->condition('uid', $item['uid'])
+      ->execute();
+
+    if (empty($account->data['uc_stripe_customer_id'])) {
+      user_save($account, array('data' => array('uc_stripe_customer_id' => $stripe_customer_id)));
     }
   }
-  $sandbox['progress'] += $sandbox['per_run'];
 
-  if ($sandbox['progress'] <= $sandbox['max']) {
-    $ret['#finished'] = $sandbox['progress'] / $sandbox['max'];
+  if ($sandbox['progress'] >= $sandbox['max'] || $result->rowCount() == 0) {
+    $sandbox['#finished'] = 1;
+  } else  {
+    $sandbox['#finished'] = $sandbox['progress'] / $sandbox['max'];
   }
-  return $ret;
 }

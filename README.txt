@@ -22,6 +22,24 @@ of the Ubercart Recurring module:
 http://drupal.org/project/uc_recurring
 and set up as described below
 
+f) Every site dealing with credit cards in any way should be using https. It's
+your responsibility to make this happen. (Actually, almost every site should
+be https everywhere at this time in the web's history.)
+
+Upgrading from uc_stripe 6.x-1.x or 7.x-1.x
+===========================================
+
+7.x-2.x does not use Stripe subscriptions for recurring payments, but instead
+uses the uc_recurring module. This means you have control of recurring
+transactions without having to manage them on the Stripe dashboard. (Credit
+card numbers and sensitive data are *not* stored on your site; only the Stripe
+customer ID is stored.)
+
+The upgrade hooks, however, must move the customer id stored in the obsolete
+uc_recurring_stripe table into the user table. When this happens the old
+record in the uc_recurring_stripe table will have its plan changed to
+<old_plan>_obsolete. This just prevents an import from happening more than once
+and gives you backout options if you wanted to downgrade.
 
 Recurring Payments Setup
 ========================
@@ -42,7 +60,7 @@ on admin/store/settings/payment/edit/recurring)
 If you were using Stripe subscriptions in v1 of this module, you may have to
 disable those subscriptions in order to not double-charge your customers.
 
-uc_stripe 6.x-2.x was based on Bitcookie's work (thanks!) which was posted at
+uc_stripe 6.x-2.x and 7.x-2.x were based on Bitcookie's work (thanks!) which was posted at
 http://bitcookie.com/blog/pci-compliant-ubercart-and-stripe-js
 from discussion in the uc_stripe issue queue,
 https://www.drupal.org/node/1467886
