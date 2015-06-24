@@ -5,6 +5,7 @@
  * Installation file for the uc_stripe module.
  */
 
+
 /**
  * Implements hook_requirements().
  */
@@ -22,14 +23,22 @@ function uc_stripe_requirements($phase) {
     $requirements['uc_stripe_curl']['description'] = $t("The Stripe API requires the PHP <a href='!curl_url'>cURL</a> library.", array('!curl_url' => 'http://php.net/manual/en/curl.setup.php'));
   }
 
-  if (!_uc_stripe_load_api()) {
-    $requirements['uc_stripe_api']['title'] = $t('Stripe PHP API');
-    $requirements['uc_stripe_api']['value'] = $t('Not Installed');
+  $php_api_version = _uc_stripe_load_api();
+  $requirements['uc_stripe_api'] = array(
+    'title' => $t('Stripe PHP API'),
+    'value' => $t('Version !version', array('!version' => $php_api_version)),
+  );
+  if ($php_api_version != UC_STRIPE_STRIPE_PHP_LIBRARY_VERSION) {
+    $requirements['uc_stripe_api']['value'] = empty($php_api_version) ? $t('Not Installed') : $t('Unsupported version installed');
     $requirements['uc_stripe_api']['severity'] = REQUIREMENT_ERROR;
-    $requirements['uc_stripe_api']['description'] = $t('The Stripe PHP API is not installed or cannot be loaded.');
+    $requirements['uc_stripe_api']['description'] = empty($php_api_version) ? $t('Please install Stripe PHP Library version @version', array('@version' => UC_STRIPE_STRIPE_PHP_LIBRARY_VERSION)) : $t('Stripe PHP API version @current_version is installed but @required_version is required', array('@current_version' => $php_api_version, '@required_version' => UC_STRIPE_STRIPE_PHP_LIBRARY_VERSION));
   }
 
 
+  $requirements['uc_stripe_keys'] = array(
+    'title' => $t('Stripe API Keys'),
+    'value' => $t('Configured'),
+  );
   if ($phase == 'runtime' && !_uc_stripe_check_api_keys()) {
     $requirements['uc_stripe_keys']['title'] = $t('Stripe API Keys.');
     $requirements['uc_stripe_keys']['value'] = $t('Not configured');
@@ -43,16 +52,16 @@ function uc_stripe_requirements($phase) {
 /**
  * Load the PHP API
  *
- * @return bool
+ * @return Stripe version number as string or FALSE if failed to load
  */
 function _uc_stripe_load_api() {
-  $path = libraries_get_path('stripe');
-  $loaded = @include_once $path . '/lib/Stripe.php';
-  if (empty($path) || empty($loaded)) {
-    watchdog('uc_stripe', 'Stripe PHP API Library not found. Please install into libraries directory, usually sites/all/libraries/stripe', array(), WATCHDOG_ERROR);
-    return FALSE;
+  module_load_include('module', 'uc_stripe');
+
+  if (($library = libraries_load('stripe')) && !empty($library['loaded'])) {
+    return \Stripe\Stripe::VERSION;
   }
-  return TRUE;
+  return FALSE;
+
 }
 
 /**
@@ -60,12 +69,8 @@ function _uc_stripe_load_api() {
  */
 function uc_stripe_install() {
   // This turns ON the uc_recurring cron task to renew. We want this
-  // ON because the renewal payments are handled by Ubercart and NOT the stripe gateway
+  // ON because the renewal payments are handled by uc_recurring and NOT the stripe gateway
   variable_set('uc_recurring_trigger_renewals', TRUE);
-
-  // For PCI-DSS compatibility, skip review must be enabled so cc data doesn't
-  // get to server.
-  variable_set('uc_checkout_skip_review', TRUE);
 
   // Stripe does cc validation, so uc_credit must not... especially because
   // uc_credit gets a bogus cc number.

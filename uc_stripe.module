@@ -9,6 +9,83 @@
  * https://www.drupal.org/node/1467886
  */
 
+// Specify the endpoint API version currently used here.
+define('UC_STRIPE_STRIPE_API_VERSION', '2015-06-15');
+// Currently required Stripe PHP Library version
+define('UC_STRIPE_STRIPE_PHP_LIBRARY_VERSION', '2.2.0');
+
+/**
+ * Implements hook_libraries_info() to define what files should be loaded.
+ *
+ * @return mixed
+ */
+function uc_stripe_libraries_info() {
+
+  $libraries['stripe'] = array(
+    'name' => 'Stripe PHP Library',
+    'vendor url' => 'http://stripe.com',
+    'download url' => 'https://stripe.com/docs/libraries',
+    'version arguments' => array(
+      'file' => 'lib/Stripe.php',
+      'pattern' => '/VERSION.*\'([0-9\.]+)\'/',
+      'lines' => 500,
+    ),
+
+    // Unfortunately the order here is important, as some code executes on
+    // loading each of these.
+    'files' => array(
+      'php' => array(
+        'lib/Util/RequestOptions.php',
+        'lib/Util/Set.php',
+        'lib/Util/Util.php',
+        'lib/Object.php',
+        'lib/ApiResource.php',
+        'lib/Account.php',
+        'lib/ExternalAccount.php',
+        'lib/AlipayAccount.php',
+        'lib/ApiRequestor.php',
+        'lib/ApplicationFee.php',
+        'lib/ApplicationFeeRefund.php',
+        'lib/AttachedObject.php',
+        'lib/SingletonApiResource.php',
+        'lib/Balance.php',
+        'lib/BalanceTransaction.php',
+        'lib/BankAccount.php',
+        'lib/BitcoinReceiver.php',
+        'lib/BitcoinTransaction.php',
+        'lib/Card.php',
+        'lib/Charge.php',
+        'lib/Collection.php',
+        'lib/Coupon.php',
+        'lib/Customer.php',
+        'lib/Error/Base.php',
+        'lib/Error/Api.php',
+        'lib/Error/ApiConnection.php',
+        'lib/Error/Authentication.php',
+        'lib/Error/Card.php',
+        'lib/Error/InvalidRequest.php',
+        'lib/Error/RateLimit.php',
+        'lib/Event.php',
+        'lib/FileUpload.php',
+        'lib/HttpClient/ClientInterface.php',
+        'lib/HttpClient/CurlClient.php',
+        'lib/Invoice.php',
+        'lib/InvoiceItem.php',
+        'lib/Plan.php',
+        'lib/Recipient.php',
+        'lib/Refund.php',
+        'lib/Stripe.php',
+        'lib/Subscription.php',
+        'lib/Token.php',
+        'lib/Transfer.php',
+        'lib/TransferReversal.php',
+      ),
+    ),
+  );
+
+  return $libraries;
+}
+
 /**
  * Implements hook_payment_gateway to register this payment gateway
  * @return array
@@ -297,7 +374,7 @@ function uc_stripe_charge($order_id, $amount, $data) {
       $stripe_token = $_SESSION['stripe']['token'];
 
       //Create the customer in stripe
-      $customer = Stripe_Customer::create(array(
+      $customer = \Stripe\Customer::create(array(
           "card" => $stripe_token,
           'description' => "OrderID: {$order->order_id}",
           'email' => "$order->primary_email"
@@ -356,7 +433,7 @@ function uc_stripe_charge($order_id, $amount, $data) {
     }
 
     // charge the Customer the amount in the order
-    $charge = Stripe_Charge::create(array(
+    $charge = \Stripe\Charge::create(array(
         "amount" => $amount,
         "currency" => "usd",
         "customer" => $stripe_customer_id,
@@ -441,7 +518,7 @@ function uc_stripe_renew($order, &$fee) {
     $amount = $fee->fee_amount;
     $amount = $amount * 100;
 
-    $charge = Stripe_Charge::create(array(
+    $charge = \Stripe\Charge::create(array(
         "amount" => $amount,
         "currency" => "usd",
         "customer" => $stripe_customer_id
@@ -528,7 +605,8 @@ function _uc_stripe_prepare_api() {
 
   $secret_key = variable_get('uc_stripe_testmode', TRUE) ? variable_get('uc_stripe_api_key_test_secret', '') : variable_get('uc_stripe_api_key_live_secret', '');
   try {
-    Stripe::setApiKey($secret_key);
+    \Stripe\Stripe::setApiKey($secret_key);
+    \Stripe\Stripe::setApiVersion(UC_STRIPE_STRIPE_API_VERSION);
   } catch (Exception $e) {
     watchdog('uc_stripe', 'Error setting the Stripe API Key. Payments will not be processed: %error', array('%error' => $e->getMessage()));
   }
