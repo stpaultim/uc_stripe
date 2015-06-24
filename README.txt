@@ -1,5 +1,11 @@
 This is an Ubercart payment gateway module for Stripe.
 
+Versions of the Stripe PHP Library and Stripe API that this module is currently
+configured for are in the top of uc_stripe.module:
+  define('UC_STRIPE_STRIPE_API_VERSION', '2015-06-15');
+  define('UC_STRIPE_STRIPE_PHP_LIBRARY_VERSION', '2.2.0');
+
+
 Installation and Setup
 ======================
 
@@ -12,7 +18,7 @@ section, and enable the gateway under the Payment Gateways.
 c) On this page, provide the following settings:
    - Your Stripe API key, private
 
-d) Download and install the latest version of the PHP Stripe
+d) Download and install version 2.2.0 PHP Stripe
 library (https://github.com/stripe/stripe-php. Put it in
 sites/all/libraries/stripe such that the path to Stripe.php
 is sites/all/libraries/stripe/lib/Stripe.php
@@ -20,7 +26,7 @@ is sites/all/libraries/stripe/lib/Stripe.php
 e) If you are using recurring payments, install version 2.x
 of the Ubercart Recurring module:
 http://drupal.org/project/uc_recurring
-and set up as described below
+and set up as described below.
 
 f) Every site dealing with credit cards in any way should be using https. It's
 your responsibility to make this happen. (Actually, almost every site should
@@ -40,6 +46,11 @@ uc_recurring_stripe table into the user table. When this happens the old
 record in the uc_recurring_stripe table will have its plan changed to
 <old_plan>_obsolete. This just prevents an import from happening more than once
 and gives you backout options if you wanted to downgrade.
+
+If you were using 1.x of this module and want to cancel existing subscriptions
+which were configured via the Stripe api (since they are now managed via
+uc_recurring) a drush command is provided to cancel these. Use "drush help subcancel"
+for more information.
 
 Recurring Payments Setup
 ========================
