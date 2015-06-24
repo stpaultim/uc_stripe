@@ -57,7 +57,7 @@ function uc_stripe_requirements($phase) {
 function _uc_stripe_load_api() {
   module_load_include('module', 'uc_stripe');
 
-  if (($library = libraries_load('stripe')) && !empty($library['loaded'])) {
+  if (($library = libraries_load('stripe')) && !empty($library['loaded']) && class_exists('\Stripe\Stripe')) {
     return \Stripe\Stripe::VERSION;
   }
   return FALSE;
