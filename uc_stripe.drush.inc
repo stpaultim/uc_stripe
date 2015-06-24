@@ -49,22 +49,30 @@ function drush_uc_stripe_subscription_cancel($order_id = 'all') {
     return;
   }
 
+  $library = libraries_load('stripe');
+  if (!$library['loaded'] || \Stripe\Stripe::VERSION != UC_STRIPE_STRIPE_PHP_LIBRARY_VERSION) {
+    drush_print("Failed to load stripe library version " . UC_STRIPE_STRIPE_PHP_LIBRARY_VERSION);
+    return;
+  }
+
   if ($dry_run) {
     drush_print('dry-run is set so not deleting any subscriptions');
   }
   _uc_stripe_prepare_api();
-  $query = 'SELECT * from {uc_recurring_stripe} ucs ';
-  if ($order_id != 'all') {
-    $query .= ' WHERE order_id = %d';
-  }
-  $result = db_query($query, array($order_id));
+  $query = db_select('uc_recurring_stripe', 'urs', array('fetch' => PDO::FETCH_ASSOC))
+    ->fields('urs', array('uid', 'customer_id', 'order_id' ));
 
-  while ($item = db_fetch_array($result)) {
+  if ($order_id != 'all') {
+    $query->condition('order_id', ':id');
+  }
+  $result = $query->execute();
+
+  foreach ($result as $item) {
     $customer = NULL;
     $account = user_load($item['uid']);
 
     try {
-      $customer = Stripe_Customer::retrieve($item['customer_id']);
+      $customer = \Stripe\Customer::retrieve($item['customer_id']);
       $subscriptions = $customer->subscriptions->all();
     } catch (Exception $e) {
       drush_print("Failed to retrieve customer subscriptions for {$item['customer_id']} (user:$account->name}. Message: {$e->getMessage()}");
