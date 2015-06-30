@@ -607,7 +607,7 @@ function uc_stripe_cancel($order, $op) {
 function _uc_stripe_prepare_api() {
 
   module_load_include('install', 'uc_stripe');
-  if (!_uc_stripe_load_api()) {
+  if (!_uc_stripe_load_library()) {
     return FALSE;
   }
 
