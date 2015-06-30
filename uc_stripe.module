@@ -184,7 +184,7 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
     if (variable_get('uc_stripe_testmode', TRUE)) {
       $form['panes']['testmode'] = array(
         '#prefix' => "<div class='messages' style='background-color:#BEEBBF'>",
-        '#markup' => t("Test mode is <strong>ON</strong> for the Stripe Payment Gateway. Your  card will not be charged. To change this setting, edit the !link", array('!link' => l("Stripe settings", "admin/store/settings/payment/edit/gateways"))),
+        '#markup' => t("Test mode is <strong>ON</strong> for the Stripe Payment Gateway. Your  card will not be charged. To change this setting, edit the !link", array('!link' => l("Stripe settings", "admin/store/settings/payment/method/credit"))),
         '#suffix' => "</div>",
       );
     }
