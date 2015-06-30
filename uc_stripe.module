@@ -135,7 +135,23 @@ function uc_stripe_recurring_info() {
  * @param $form_state
  * @param $form_id
  */
-function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state, $form_id) {
+function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
+
+  $payment_form = &$form['panes']['payment']['details'];
+
+  $payment_form['stripe_nojs_warning'] = array(
+    '#type' => 'item',
+    '#markup' => '<span id="stripe-nojs-warning" class="stripe-warning">' . t('Sorry, for security reasons your card cannot be processed because Javascript is disabled in your browser.') . '</span>',
+    '#weight' => -1000,
+  );
+
+  $payment_form['stripe_token'] = array(
+    '#type' => 'hidden',
+    '#default_value' => 'default',
+    '#attributes' => array(
+      'id' => 'edit-panes-payment-details-stripe-token',
+    ),
+  );
 
   // Prevent form submission if javascript has not enabled the button.
   // If JS happens to be disabled, we don't want user to be able to submit.
@@ -161,7 +177,7 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state, $form_
   // This image after loading triggers js to make sure the JS warning and disablings are removed
   $image_path = url(drupal_get_path('module', 'uc_stripe') . '/images/1px.png');
   $form['dummy_image_load'] = array(
-    '#markup' => "<img src='{$image_path}' style='display:none;' onload='uc_stripe_clean_cc_form()'>",
+    '#markup' => "<img id='dummy-image-load-image' src='{$image_path}' style='display:none;' />",
   );
 
   if (uc_credit_default_gateway() == 'uc_stripe') {
@@ -637,40 +653,6 @@ function _uc_stripe_get_customer_id($uid) {
   return $id;
 }
 
-/**
- * implements hook_form_alter() to make sure that we have control of the
- * credit form. It's critical that it have these elements; if we used
- * hook_form_FORMID_alter for this some other module might get an earlier
- * chance at it.
- *
- * @param $form
- * @param $form_state
- * @param $form_id
- */
-function uc_stripe_form_alter(&$form, &$form_state, $form_id) {
-  if ($form_id == 'uc_cart_checkout_form') {
-
-    $payment_form = &$form['panes']['payment']['details'];
-
-    // Make sure tp properly prepare the CC form. Because so much is done
-    // by AJAX on this page, do this again on cc number change.
-    $payment_form['cc_number']['#attributes']['onchange'] = 'uc_stripe_clean_cc_form()';
-
-    $payment_form['stripe_nojs_warning'] = array(
-      '#type' => 'item',
-      '#value' => '<span id="stripe-nojs-warning" class="stripe-warning">' . t('Sorry, for security reasons your card cannot be processed because Javascript is disabled in your browser.') . '</span>',
-      '#weight' => -1000,
-    );
-
-    $payment_form['stripe_token'] = array(
-      '#type' => 'hidden',
-      '#default_value' => 'default',
-      '#attributes' => array(
-        'id' => 'edit-panes-payment-details-stripe-token',
-      ),
-    );
-  }
-}
 
 /**
  * Implements hook_theme_registry_alter() to make sure that we render

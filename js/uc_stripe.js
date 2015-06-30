@@ -12,8 +12,19 @@
 
   Drupal.behaviors.uc_stripe = {
     attach: function (context) {
-      var form = $('#uc-cart-checkout-form');
-      var submitButton = form.find('#edit-continue');
+      var submitButton = $('#uc-cart-checkout-form #edit-continue');
+
+      // When the dummy image loads, we know that the form has been properly altered,
+      // so can clean the form.
+      $('#dummy-image-load-image').load(function() {
+        // Remove 'name' from sensitive form elements so there's no way they can be submitted.
+        $('#edit-panes-payment-details-cc-number').removeAttr('name').removeAttr('disabled');
+        $('#edit-panes-payment-details-cc-cvv').removeAttr('name').removeAttr('disabled');
+        $('span#stripe-nojs-warning').parent().hide();
+
+        // JS must enable the button; otherwise form might disclose cc info. It starts disabled
+        $('#edit-continue').attr('disabled', false);
+      });
 
       submitButton.click(function (e) {
         if ($('#edit-panes-payment-payment-method-credit').is(':checked')) {
@@ -35,8 +46,9 @@
             if (response.error) {
 
               // Show the errors on the form
-              $('#uc_stripe_messages').removeClass("hidden");
-              $('#uc_stripe_messages').text(response.error.message);
+              $('#uc_stripe_messages')
+                .removeClass("hidden")
+                .text(response.error.message);
               $('#edit-stripe-messages').val(response.error.message);
 
               // Turn off the throbber - we're done here
@@ -64,6 +76,7 @@
               // now actually submit to Drupal. The only "real" things going
               // are the token and the expiration date.
               submitButton.click();
+              //submitButton.mousedown();
             }
           });
         }
@@ -71,15 +84,5 @@
     }
   };
 
-// Remove 'name' from sensitive form elements so there's no way they can be submitted.
-  function uc_stripe_clean_cc_form() {
-
-    $('#edit-panes-payment-details-cc-number').removeAttr('name').removeAttr('disabled');
-    $('#edit-panes-payment-details-cc-cvv').removeAttr('name').removeAttr('disabled');
-    $('span#stripe-nojs-warning').parent().hide();
-
-    // JS must enable the button; otherwise form might disclose cc info. It starts disabled
-    $('#edit-continue').attr('disabled', false);
-  }
 
 }(jQuery));
