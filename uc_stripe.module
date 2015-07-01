@@ -153,9 +153,16 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
     ),
   );
 
-  // Prevent form submission if javascript has not enabled the button.
-  // If JS happens to be disabled, we don't want user to be able to submit.
-  $form['actions']['continue']['#disabled'] = TRUE;
+  // Prevent form Credit card fill and submission if javascript has not removed
+  // the "disabled" attributes..
+  // If JS happens to be disabled, we don't want user to be able to enter CC data.
+  // Note that we can't use '#disabled', as it causes Form API to discard all input,
+  // so use the disabled attribute instead.
+  $form['panes']['payment']['details']['cc_number']['#attributes']['disabled'] = 'disabled';
+  if (empty($form['actions']['continue']['#attributes'])) {
+    $form['actions']['continue']['#attributes'] = array();
+  }
+  $form['actions']['continue']['#attributes']['disabled'] = 'disabled';
 
   $apikey = variable_get('uc_stripe_testmode', TRUE) ? variable_get('uc_stripe_api_key_test_publishable', '') : variable_get('uc_stripe_api_key_live_publishable', '');
 

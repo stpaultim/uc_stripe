@@ -68,15 +68,20 @@
               // Since we're now submitting, make sure that uc_credit doesn't
               // find values it objects to; after "fixing" set the name back on the
               // form element.
-              $('#edit-panes-payment-details-cc-number').css('visibility', 'hidden').val('424242424242' + response.card.last4).attr('name', 'panes[payment][details][cc_number]');
-              $("#edit-panes-payment-details-cc-cvv").css('visibility', 'hidden').val('999').attr('name', 'panes[payment][details][cc_cvv]');
+              $('#edit-panes-payment-details-cc-number')
+                .css('visibility', 'hidden')
+                .val('555555555555' + response.card.last4)
+                .attr('name', 'panes[payment][details][cc_number]');
+              $("#edit-panes-payment-details-cc-cvv")
+                .css('visibility', 'hidden')
+                .val('999')
+                .attr('name', 'panes[payment][details][cc_cvv]');
 
               Drupal.uc_stripe.systemClicked = true;
 
               // now actually submit to Drupal. The only "real" things going
               // are the token and the expiration date.
               submitButton.click();
-              //submitButton.mousedown();
             }
           });
         }
