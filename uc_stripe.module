@@ -181,12 +181,6 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
     '#markup' => "<div id='uc_stripe_messages' class='messages error hidden'></div>",
   );
 
-  // This image after loading triggers js to make sure the JS warning and disablings are removed
-  $image_path = url(drupal_get_path('module', 'uc_stripe') . '/images/1px.png');
-  $form['dummy_image_load'] = array(
-    '#markup' => "<img id='dummy-image-load-image' src='{$image_path}' style='display:none;' />",
-  );
-
   if (uc_credit_default_gateway() == 'uc_stripe') {
     if (variable_get('uc_stripe_testmode', TRUE)) {
       $form['panes']['testmode'] = array(

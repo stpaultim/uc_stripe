@@ -14,17 +14,14 @@
     attach: function (context) {
       var submitButton = $('#uc-cart-checkout-form #edit-continue');
 
-      // When the dummy image loads, we know that the form has been properly altered,
-      // so can clean the form.
-      $('#dummy-image-load-image').load(function() {
-        // Remove 'name' from sensitive form elements so there's no way they can be submitted.
-        $('#edit-panes-payment-details-cc-number').removeAttr('name').removeAttr('disabled');
-        $('#edit-panes-payment-details-cc-cvv').removeAttr('name').removeAttr('disabled');
-        $('span#stripe-nojs-warning').parent().hide();
+      // When this behavior fires, we can clean the form so it will behave properly,
+      // Remove 'name' from sensitive form elements so there's no way they can be submitted.
+      $('#edit-panes-payment-details-cc-number').removeAttr('name').removeAttr('disabled');
+      $('#edit-panes-payment-details-cc-cvv').removeAttr('name').removeAttr('disabled');
+      $('span#stripe-nojs-warning').parent().hide();
 
-        // JS must enable the button; otherwise form might disclose cc info. It starts disabled
-        $('#edit-continue').attr('disabled', false);
-      });
+      // JS must enable the button; otherwise form might disclose cc info. It starts disabled
+      $('#edit-continue').attr('disabled', false);
 
       submitButton.click(function (e) {
         if ($('#edit-panes-payment-payment-method-credit').is(':checked')) {
