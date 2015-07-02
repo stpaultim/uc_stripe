@@ -449,7 +449,7 @@ function uc_stripe_charge($order_id, $amount, $data) {
     // charge the Customer the amount in the order
     $charge = \Stripe\Charge::create(array(
         "amount" => $amount,
-        "currency" => "usd",
+        "currency" => strtolower($order->currency),
         "customer" => $stripe_customer_id,
       )
     );
@@ -534,7 +534,7 @@ function uc_stripe_renew($order, &$fee) {
 
     $charge = \Stripe\Charge::create(array(
         "amount" => $amount,
-        "currency" => "usd",
+        "currency" => strtolower($order->currency),
         "customer" => $stripe_customer_id
       )
     );
