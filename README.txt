@@ -19,7 +19,7 @@ c) On this page, provide the following settings:
    - Your Stripe API key, private
 
 d) Download and install version 2.2.0 PHP Stripe
-library (https://github.com/stripe/stripe-php. Put it in
+library from https://github.com/stripe/stripe-php/releases. Put it in
 sites/all/libraries/stripe such that the path to Stripe.php
 is sites/all/libraries/stripe/lib/Stripe.php. PLEASE CLEAR THE CACHE AFTER
 CHANGING THE STRIPE PHP LIBRARY. The Libraries module caches its memory of
