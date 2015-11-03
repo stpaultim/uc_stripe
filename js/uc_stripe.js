@@ -54,65 +54,73 @@
 
         // Go ahead and request the token
         tokenField.val('requested');
-        Stripe.createToken({
-          number: cc_num.val(),
-          cvc: cc_cvv.val(),
-          exp_month: $(':input[name="panes[payment][details][cc_exp_month]"]').val(),
-          exp_year: $(':input[name="panes[payment][details][cc_exp_year]"]').val()
-        }, function (status, response) {
 
-          if (response.error) {
+        try {
+          Stripe.createToken({
+            number: cc_num.val(),
+            cvc: cc_cvv.val(),
+            exp_month: $(':input[name="panes[payment][details][cc_exp_month]"]').val(),
+            exp_year: $(':input[name="panes[payment][details][cc_exp_year]"]').val()
+          }, function (status, response) {
 
-            // Show the errors on the form
-            $('#uc_stripe_messages')
-              .removeClass("hidden")
-              .text(response.error.message);
-            $('#edit-stripe-messages').val(response.error.message);
+            if (response.error) {
 
-            // Make the fields visible again for retry
-            cc_num
-              .css('visibility', 'visible')
-              .val('')
-              .attr('name', 'panes[payment][details][cc_number]');
-            cc_cvv
-              .css('visibility', 'visible')
-              .val('')
-              .attr('name', 'panes[payment][details][cc_cvv]');
+              // Show the errors on the form
+              $('#uc_stripe_messages')
+                .removeClass("hidden")
+                .text(response.error.message);
+              $('#edit-stripe-messages').val(response.error.message);
+
+              // Make the fields visible again for retry
+              cc_num
+                .css('visibility', 'visible')
+                .val('')
+                .attr('name', 'panes[payment][details][cc_number]');
+              cc_cvv
+                .css('visibility', 'visible')
+                .val('')
+                .attr('name', 'panes[payment][details][cc_cvv]');
 
 
-            // Turn off the throbber
-            $('.ubercart-throbber').remove();
-            // Remove the bogus copy of the submit button added in uc_cart.js ucSubmitOrderThrobber
-            submitButton.next().remove();
-            // And show the hidden original button which has the behavior attached to it.
-            submitButton.show();
+              // Turn off the throbber
+              $('.ubercart-throbber').remove();
+              // Remove the bogus copy of the submit button added in uc_cart.js ucSubmitOrderThrobber
+              submitButton.next().remove();
+              // And show the hidden original button which has the behavior attached to it.
+              submitButton.show();
 
-            tokenField.val('default'); // Make sure token field set back to default
+              tokenField.val('default'); // Make sure token field set back to default
 
-          } else {
-            // token contains id, last4, and card type
-            var token = response.id;
+            } else {
+              // token contains id, last4, and card type
+              var token = response.id;
 
-            // Insert the token into the form so it gets submitted to the server
-            tokenField.val(token);
+              // Insert the token into the form so it gets submitted to the server
+              tokenField.val(token);
 
-            // Since we're now submitting, make sure that uc_credit doesn't
-            // find values it objects to; after "fixing" set the name back on the
-            // form element.
-            cc_num
-              .css('visibility', 'hidden')
-              .val('555555555555' + response.card.last4)
-              .attr('name', 'panes[payment][details][cc_number]');
-            cc_cvv
-              .css('visibility', 'hidden')
-              .val('999')
-              .attr('name', 'panes[payment][details][cc_cvv]');
+              // Since we're now submitting, make sure that uc_credit doesn't
+              // find values it objects to; after "fixing" set the name back on the
+              // form element.
+              cc_num
+                .css('visibility', 'hidden')
+                .val('555555555555' + response.card.last4)
+                .attr('name', 'panes[payment][details][cc_number]');
+              cc_cvv
+                .css('visibility', 'hidden')
+                .val('999')
+                .attr('name', 'panes[payment][details][cc_cvv]');
 
-            // now actually submit to Drupal. The only "real" things going
-            // are the token and the expiration date.
-            submitButton.click();
-          }
-        });
+              // now actually submit to Drupal. The only "real" things going
+              // are the token and the expiration date.
+              submitButton.click();
+            }
+          });
+        } catch (e) {
+          $('#uc_stripe_messages')
+            .removeClass("hidden")
+            .text(e.message);
+          $('#edit-stripe-messages').val(e.message);
+        }
 
         // Prevent processing until we get the token back
         return false;

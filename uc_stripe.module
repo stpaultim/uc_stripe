@@ -164,7 +164,7 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
   }
   $form['actions']['continue']['#attributes']['disabled'] = 'disabled';
 
-  $apikey = variable_get('uc_stripe_testmode', TRUE) ? variable_get('uc_stripe_api_key_test_publishable', '') : variable_get('uc_stripe_api_key_live_publishable', '');
+  $apikey = variable_get('uc_stripe_testmode', TRUE) ? check_plain(variable_get('uc_stripe_api_key_test_publishable', '')) : check_plain(variable_get('uc_stripe_api_key_live_publishable', ''));
 
 
   // Add custom JS and CSS
@@ -304,13 +304,57 @@ function uc_stripe_settings_form() {
   return $form;
 }
 
+/**
+ * Implements hook_form_FORMID_alter()
+ *
+ * Add validation function for stripe settings
+ *
+ * @param $form
+ * @param $form_state
+ */
+function uc_stripe_form_uc_payment_method_settings_form_alter(&$form, &$form_state) {
+  $form['#validate'][] = 'uc_stripe_settings_form_validate';
+}
 
-//-------------------------------------------------------------------------------------------|
-//
-//
-//
-//
-//-------------------------------------------------------------------------------------------|
+/**
+ * Validation function and normalize keys (trim spaces)
+ *
+ * @param $form
+ * @param $form_state
+ */
+function uc_stripe_settings_form_validate($form, &$form_state) {
+  $elements = array('uc_stripe_api_key_test_secret', 'uc_stripe_api_key_test_publishable', 'uc_stripe_api_key_live_secret', 'uc_stripe_api_key_live_publishable', );
+
+  foreach ($elements as $element_name) {
+    $form_state['values'][$element_name] = _uc_stripe_sanitize_key($form_state['values'][$element_name]);
+    if (!_uc_stripe_validate_key($form_state['values'][$element_name])) {
+      form_set_error($element_name, t('@name does not appear to be a valid stripe key', array('@name' => $element_name)));
+    }
+  }
+}
+
+/**
+ * Sanitize and strip whitespace from Stripe keys
+ *
+ * @param $key
+ */
+function _uc_stripe_sanitize_key($key) {
+  $key = trim($key);
+  $key = check_plain($key);
+  return $key;
+}
+
+/**
+ * Validate Stripe key
+ *
+ * @param $key
+ * @return boolean
+ */
+function _uc_stripe_validate_key($key) {
+  $valid = preg_match('/^[a-zA-Z0-9_]+$/', $key);
+  return $valid;
+}
+
 /**
  * Custom submit function to store the stripe token
  *
