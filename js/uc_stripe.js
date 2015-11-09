@@ -26,6 +26,7 @@
       // When this behavior fires, we can clean the form so it will behave properly,
       // Remove 'name' from sensitive form elements so there's no way they can be submitted.
       cc_num.removeAttr('name').removeAttr('disabled');
+      $('div.form-item-panes-payment-details-cc-number').removeClass('form-disabled');
       cc_cvv.removeAttr('name').removeAttr('disabled');
       var cc_val_val = cc_num.val();
       if (cc_val_val && cc_val_val.indexOf('Last 4')) {
