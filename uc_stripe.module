@@ -234,17 +234,25 @@ function uc_stripe_uc_checkout_complete($order, $account) {
 
 
 /**
- * Provide customer id for order pane.
+ * Implements uc_order_pane_callback() specified in 'callback' of
+ * uc_stripe_uc_order_pane()
+ *
+ * Returns text for customer id for order pane.
  *
  * @param $op
- * @param $arg1
- * @return string
+ * @param $order
+ * @param $form
+ * @param $form_state
+ * @return array
  */
-function uc_stripe_order_pane_stripe($op, $arg1) {
-  if ($op == 'view') {
-    $stripe_customer_id = _uc_stripe_get_customer_id($arg1->uid);
-    $output = t("Stripe Customer ID: ") . $stripe_customer_id;
-    return $output;
+function uc_stripe_order_pane_stripe($op, $order, &$form = NULL, &$form_state = NULL) {
+  switch ($op) {
+    case 'view':
+      $stripe_customer_id = _uc_stripe_get_customer_id($order->uid);
+      $output = t("Customer ID: ") . $stripe_customer_id;
+      return array('#markup' => $output);
+    default:
+      return;
   }
 }
 
