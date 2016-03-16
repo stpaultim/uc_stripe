@@ -507,6 +507,7 @@ function uc_stripe_charge($order_id, $amount, $data) {
         "amount" => $amount,
         "currency" => strtolower($order->currency),
         "customer" => $stripe_customer_id,
+        "description" => t("Order #@order_id", array("@order_id" => $order_id)),
       )
     );
 
