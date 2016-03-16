@@ -507,7 +507,8 @@ function uc_stripe_charge($order_id, $amount, $data) {
 
     $result = array(
       'success' => TRUE,
-      'message' => t('Payment of @amount processed successfully, transaction id @transaction_id.', array('@amount' => $formatted_amount, '@transaction_id' => $charge->__get('id'))),
+      'message' => t('Payment of @amount processed successfully, Stripe transaction id @transaction_id.', array('@amount' => $formatted_amount, '@transaction_id' => $charge->__get('id'))),
+      'comment' => t('Stripe transaction ID: @transaction_id', array('@transaction_id' => $charge->__get('id'))),
       'uid' => $user->uid,
     );
 
