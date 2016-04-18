@@ -333,10 +333,12 @@ function uc_stripe_form_uc_payment_method_settings_form_alter(&$form, &$form_sta
 function uc_stripe_settings_form_validate($form, &$form_state) {
   $elements = array('uc_stripe_api_key_test_secret', 'uc_stripe_api_key_test_publishable', 'uc_stripe_api_key_live_secret', 'uc_stripe_api_key_live_publishable', );
 
-  foreach ($elements as $element_name) {
-    $form_state['values'][$element_name] = _uc_stripe_sanitize_key($form_state['values'][$element_name]);
-    if (!_uc_stripe_validate_key($form_state['values'][$element_name])) {
-      form_set_error($element_name, t('@name does not appear to be a valid stripe key', array('@name' => $element_name)));
+  if ($form_state['values']['uc_pg_uc_stripe_enabled']) {
+    foreach ($elements as $element_name) {
+      $form_state['values'][$element_name] = _uc_stripe_sanitize_key($form_state['values'][$element_name]);
+      if (!_uc_stripe_validate_key($form_state['values'][$element_name])) {
+        form_set_error($element_name, t('@name does not appear to be a valid stripe key', array('@name' => $element_name)));
+      }
     }
   }
 }
