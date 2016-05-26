@@ -37,6 +37,11 @@ that feature on your *Stripe* account settings. Click the checkbox for
 "Decline Charges that fail zip code verification" on the "Account info" page.
 (You must be collecting billing address information for this to work, of course.)
 
+h) The uc_credit setting "Validate credit card numbers at checkout" must be
+disabled on admin/store/settings/payment/method/credit - uc_credit never sees
+the credit card number, so cannot properly validate it (and we don't want it to
+ever know the credit card number.)
+
 Upgrading from uc_stripe 6.x-1.x or 7.x-1.x
 ===========================================
 

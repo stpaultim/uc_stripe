@@ -55,6 +55,16 @@ function uc_stripe_requirements($phase) {
     $requirements['uc_stripe_keys']['description'] = $t('The Stripe API keys are not fully configured.');
   }
 
+  // Make sure they don't enable the "Check credit"
+  if ($phase == 'runtime' && variable_get('uc_credit_validate_numbers', FALSE)) {
+    $requirements['uc_stripe_validate_numbers'] = array(
+      'title' => t('Stripe Credit Card Validation'),
+      'value' => t('Enabled'),
+      'severity' => REQUIREMENT_ERROR,
+      'description' => t("uc_credit's 'Validate credit card numbers at checkout' option must be disabled when using uc_stripe, as uc_credit never sees the card number."),
+    );
+  }
+
   return $requirements;
 }
 

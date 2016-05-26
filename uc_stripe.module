@@ -345,6 +345,12 @@ function uc_stripe_settings_form_validate($form, &$form_state) {
       }
     }
   }
+
+  // Make sure they haven't tried to validate credit card numbers, as uc_stripe will not provide a real one.
+  if (!empty($form_state['values']['uc_credit_validate_numbers'])) {
+    form_set_error('uc_credit_validate_numbers', t('When used with Ubercart Stripe, "Validate credit card number at checkout" must be unchecked.'));
+  }
+
 }
 
 /**
@@ -746,3 +752,5 @@ function uc_stripe_uc_payment_method_credit_form($form) {
 
   return $output;
 }
+
+
