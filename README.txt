@@ -32,6 +32,11 @@ f) Every site dealing with credit cards in any way should be using https. It's
 your responsibility to make this happen. (Actually, almost every site should
 be https everywhere at this time in the web's history.)
 
+g) If you want Stripe to attempt to validate zip/postal codes, you must enable
+that feature on your *Stripe* account settings. Click the checkbox for
+"Decline Charges that fail zip code verification" on the "Account info" page.
+(You must be collecting billing address information for this to work, of course.)
+
 Upgrading from uc_stripe 6.x-1.x or 7.x-1.x
 ===========================================
 

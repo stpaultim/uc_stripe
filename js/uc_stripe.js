@@ -57,11 +57,32 @@
         tokenField.val('requested');
 
         try {
+          var address_zip = undefined;
+          var name = undefined;
+
+          // Try to get postal_code and name from billing pane
+          if ($(':input[name="panes[billing][billing_postal_code]"]').length) {
+            address_zip = $(':input[name="panes[billing][billing_postal_code]"]').val();
+          }
+          if ($(':input[name="panes[billing][billing_first_name]"]').length) {
+            name = $(':input[name="panes[billing][billing_first_name]"]').val() + " " + $(':input[name="panes[billing][billing_last_name]"]').val();
+          }
+
+          // If we didn't find postal code/name in billing pane, try it in shipping pane
+          if (typeof address_zip === "undefined") {
+            address_zip = $(':input[name="panes[delivery][delivery_postal_code]"]').val();
+          }
+          if (typeof name === "undefined" && $(':input[name="panes[delivery][delivery_first_name]"]').length) {
+            name = $(':input[name="panes[delivery][delivery_first_name]"]').val() + " " + $(':input[name="panes[delivery][delivery_last_name]"]').val();
+          }
+
           Stripe.createToken({
             number: cc_num.val(),
             cvc: cc_cvv.val(),
             exp_month: $(':input[name="panes[payment][details][cc_exp_month]"]').val(),
-            exp_year: $(':input[name="panes[payment][details][cc_exp_year]"]').val()
+            exp_year: $(':input[name="panes[payment][details][cc_exp_year]"]').val(),
+            name: name,
+            address_zip: address_zip
           }, function (status, response) {
 
             if (response.error) {
