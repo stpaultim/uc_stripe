@@ -1,10 +1,7 @@
 This is an Ubercart payment gateway module for Stripe.
 
-Versions of the Stripe PHP Library and Stripe API that this module is currently
-configured for are in the top of uc_stripe.module:
-  define('UC_STRIPE_STRIPE_API_VERSION', '2015-06-15');
-  define('UC_STRIPE_STRIPE_PHP_LIBRARY_VERSION', '2.2.0');
-
+Versions of the Stripe PHP Library and Stripe API that this module currently
+supports are found in uc_stripe_libraries_info() in uc_stripe.module.
 
 Installation and Setup
 ======================
@@ -15,15 +12,16 @@ b) Visit your Ubercart Store Administration page, Configuration
 section, and enable the gateway under the Payment Gateways.
 (admin/store/settings/payment/edit/gateways)
 
-c) On this page, provide the following settings:
+c) On that page, provide the following settings:
    - Your Stripe API key, private
 
-d) Download and install version 2.2.0 PHP Stripe
-library from https://github.com/stripe/stripe-php/releases. Put it in
-sites/all/libraries/stripe such that the path to Stripe.php
-is sites/all/libraries/stripe/lib/Stripe.php. PLEASE CLEAR THE CACHE AFTER
+d) Download and install the Stripe PHP Library version 2.2.0 or 3.13.0
+from https://github.com/stripe/stripe-php/releases. Put it in
+sites/all/libraries/stripe such that the path to VERSION
+is sites/all/libraries/stripe/lib/VERSION. YOU MUST CLEAR THE CACHE AFTER
 CHANGING THE STRIPE PHP LIBRARY. The Libraries module caches its memory of
-libraries like the Stripe Library.
+libraries like the Stripe Library.  (Version 2.2.0 support is maintained for
+existing users; version 3.13.0 supports PHP 7 and will get ongoing support.)
 
 e) If you are using recurring payments, install version 2.x
 of the Ubercart Recurring module:

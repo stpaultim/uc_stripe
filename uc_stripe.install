@@ -27,16 +27,18 @@ function uc_stripe_requirements($phase) {
   // installed without the library. Then warn at that point.
   if ($phase != 'install') {
     $php_api_version = _uc_stripe_load_library();
+    $info = libraries_info('stripe');
     $requirements['uc_stripe_api'] = array(
       'title' => $t('Stripe PHP Library'),
       'value' => $t('Version !version', array('!version' => $php_api_version)),
     );
-    if ($php_api_version != UC_STRIPE_STRIPE_PHP_LIBRARY_VERSION) {
+    if (!array_key_exists($php_api_version, $info['versions'])) {
+      $versions = join(', ', array_keys($info['versions']));
       $requirements['uc_stripe_api']['value'] = empty($php_api_version) ? $t('Not Installed') : $t('Unsupported version installed');
       $requirements['uc_stripe_api']['severity'] = REQUIREMENT_ERROR;
-      $requirements['uc_stripe_api']['description'] = empty($php_api_version) ? $t('Please install Stripe PHP Library version @version', array('@version' => UC_STRIPE_STRIPE_PHP_LIBRARY_VERSION)) : $t('Stripe PHP API version @current_version is installed but @required_version is required', array(
+      $requirements['uc_stripe_api']['description'] = empty($php_api_version) ? $t('Please install one of the following Stripe PHP Library versions: @versions', array('@versions' => $versions)) : $t('Stripe PHP API version @current_version is installed but one of the following versions is required: @versions', array(
         '@current_version' => $php_api_version,
-        '@required_version' => UC_STRIPE_STRIPE_PHP_LIBRARY_VERSION
+        '@versions' => $versions,
       ));
     }
   }
@@ -121,6 +123,13 @@ function uc_stripe_update_7202(&$sandbox) {
   else {
     return 'Old uc_recurring_stripe table did not exist, no action taken.';
   }
+}
+
+/**
+ * Make sure cached library information is not used.
+ */
+function uc_stripe_update_7203(&$sandbox) {
+  cache_clear_all('stripe', 'cache_libraries');
 }
 
 /**
