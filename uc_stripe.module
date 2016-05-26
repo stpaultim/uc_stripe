@@ -19,7 +19,8 @@ function uc_stripe_libraries_info() {
   $libraries['stripe'] = array(
     'name' => 'Stripe PHP Library',
     'vendor url' => 'http://stripe.com',
-    'download url' => 'https://github.com/stripe/stripe-php',
+    'download url' => 'https://github.com/stripe/stripe-php/releases',
+    'download file url' => 'https://github.com/stripe/stripe-php/archive/v3.13.0.tar.gz',
     'version arguments' => array(
       'file' => 'VERSION',
       'pattern' => '/(\d+\.\d+\.\d+)/',

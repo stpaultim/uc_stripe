@@ -1,5 +1,5 @@
-name = Stripe
-description = A gateway used to process payments using Stripe.
+name = Ubercart Stripe
+description = Ubercart payment gateway for Stripe.
 dependencies[] = uc_payment
 dependencies[] = uc_credit
 dependencies[] = libraries
