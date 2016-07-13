@@ -13,6 +13,11 @@ function uc_stripe_requirements($phase) {
   $t = get_t();
   $has_curl = function_exists('curl_init');
 
+  // Find out the specific versions we support, as libraries module validation
+  // is >=, not ==
+  $our_info = uc_stripe_libraries_info();
+  $versions_supported = array_keys($our_info['stripe']['versions']);
+
   $requirements['uc_stripe_curl'] = array(
     'title' => $t('cURL'),
     'value' => $has_curl ? $t('Enabled') : $t('Not found'),
@@ -27,13 +32,12 @@ function uc_stripe_requirements($phase) {
   // installed without the library. Then warn at that point.
   if ($phase != 'install') {
     $php_api_version = _uc_stripe_load_library();
-    $info = libraries_info('stripe');
     $requirements['uc_stripe_api'] = array(
       'title' => $t('Stripe PHP Library'),
       'value' => $t('Version !version', array('!version' => $php_api_version)),
     );
-    if (!array_key_exists($php_api_version, $info['versions'])) {
-      $versions = join(', ', array_keys($info['versions']));
+    if (!in_array($php_api_version, $versions_supported)) {
+      $versions = join(', ', $versions_supported);
       $requirements['uc_stripe_api']['value'] = empty($php_api_version) ? $t('Not Installed') : $t('Unsupported version installed');
       $requirements['uc_stripe_api']['severity'] = REQUIREMENT_ERROR;
       $requirements['uc_stripe_api']['description'] = empty($php_api_version) ? $t('Please install one of the following Stripe PHP Library versions: @versions', array('@versions' => $versions)) : $t('Stripe PHP API version @current_version is installed but one of the following versions is required: @versions', array(
