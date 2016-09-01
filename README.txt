@@ -16,17 +16,18 @@ c) On that page, provide your Stripe API keys, from
 https://dashboard.stripe.com/account/apikeys
 
 d) Download and install the Stripe PHP Library version 2.2.0 or >=3.13.0
-from https://github.com/stripe/stripe-php/releases. Put it in
+from https://github.com/stripe/stripe-php/releases. The recommended technique is
+to use the command
+
+drush ldl stripe
+
+If you don't use "drush ldl stripe", download and install the Stripe library in
 sites/all/libraries/stripe such that the path to VERSION
-is sites/all/libraries/stripe/lib/VERSION. YOU MUST CLEAR THE CACHE AFTER
+is sites/all/libraries/stripe/VERSION. YOU MUST CLEAR THE CACHE AFTER
 CHANGING THE STRIPE PHP LIBRARY. The Libraries module caches its memory of
 libraries like the Stripe Library.  (Version 2.2.0 support is maintained for
 existing users; version 3.13.0+ supports PHP 7 and will get ongoing support.)
 (With the latest version of the libraries module you can use the command:
-
-drush ldl stripe
-
-to download the appropriate library.)
 
 e) If you are using recurring payments, install version 2.x
 of the Ubercart Recurring module:
