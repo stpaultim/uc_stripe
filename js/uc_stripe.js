@@ -8,6 +8,16 @@
 
   Drupal.behaviors.uc_stripe = {
     attach: function (context) {
+
+      // Map stripe names to (partial) Ubercart field names; Ubercart names add "billing_" or "shipping_" on the front.
+      const address_field_mapping = {
+        "address_line1": "street1",
+        "address_line2": "street2",
+        "address_city": "city",
+        "address_state": "zone",
+        "address_zip": "postal_code",
+        "address_country": "country"
+      };
       var submitButton = $('.uc-cart-checkout-form #edit-continue');
 
       var cc_container = $('.payment-details-credit');
@@ -57,33 +67,41 @@
         tokenField.val('requested');
 
         try {
-          var address_zip = undefined;
           var name = undefined;
 
-          // Try to get postal_code and name from billing pane
-          if ($(':input[name="panes[billing][billing_postal_code]"]').length) {
-            address_zip = $(':input[name="panes[billing][billing_postal_code]"]').val();
-          }
           if ($(':input[name="panes[billing][billing_first_name]"]').length) {
             name = $(':input[name="panes[billing][billing_first_name]"]').val() + " " + $(':input[name="panes[billing][billing_last_name]"]').val();
-          }
-
-          // If we didn't find postal code/name in billing pane, try it in shipping pane
-          if (typeof address_zip === "undefined") {
-            address_zip = $(':input[name="panes[delivery][delivery_postal_code]"]').val();
           }
           if (typeof name === "undefined" && $(':input[name="panes[delivery][delivery_first_name]"]').length) {
             name = $(':input[name="panes[delivery][delivery_first_name]"]').val() + " " + $(':input[name="panes[delivery][delivery_last_name]"]').val();
           }
 
-          Stripe.createToken({
+          var params = {
             number: cc_num.val(),
             cvc: cc_cvv.val(),
             exp_month: $(':input[name="panes[payment][details][cc_exp_month]"]').val(),
             exp_year: $(':input[name="panes[payment][details][cc_exp_year]"]').val(),
-            name: name,
-            address_zip: address_zip
-          }, function (status, response) {
+            name: name
+          };
+
+          // Translate the Ubercart billing/shipping fields to Stripe values
+          for (var key in address_field_mapping) {
+            const prefixes = ['billing', 'delivery'];
+            for (var i = 0; i < prefixes.length; i++) {
+              var prefix = prefixes[i];
+              var uc_field_name = prefix + '_' + address_field_mapping[key];
+              var location = ':input[name="panes[' + prefix + '][' + uc_field_name + ']"]';
+              if ($(location).length) {
+                params[key] = $(location).val();
+                if ($(location).attr('type') == 'select-one') {
+                  params[key] = $(location + " option:selected").text();
+                }
+                break;  // break out of billing/shipping loop because we got the info
+              }
+            }
+          }
+
+          Stripe.createToken(params, function (status, response) {
 
             if (response.error) {
 

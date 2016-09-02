@@ -456,13 +456,37 @@ function uc_stripe_charge($order_id, $amount, $data) {
       }
       $stripe_token = $_SESSION['stripe']['token'];
 
-      //Create the customer in stripe
-      $customer = \Stripe\Customer::create(array(
-          "source" => $stripe_token,
-          'description' => "OrderID: {$order->order_id}",
-          'email' => "$order->primary_email"
-        )
+      $shipping_info = array();
+      if (!empty($order->delivery_postal_code)) {
+        $shipping_info = array(
+          'name' => @"{$order->delivery_first_name} {$order->delivery_last_name}",
+          'phone' => @$order->delivery_phone,
+        );
+
+        $delivery_country = uc_get_country_data(array('country_id' => $order->delivery_country));
+        if ($delivery_country === FALSE) {
+          $delivery_country = array(0 => array('country_iso_code_2' => 'US'));
+        }
+
+        $shipping_info['address'] = array(
+          'city' => @$order->delivery_city,
+          'country' => @$delivery_country[0]['country_iso_code_2'],
+          'line1' => @$order->delivery_street1,
+          'line2' => @$order->delivery_street2,
+          'postal_code' => @$order->delivery_postal_code,
+        );
+      }
+
+      $params = array(
+        "source" => $stripe_token,
+        'description' => "OrderID: {$order->order_id}",
+        'email' => "$order->primary_email"
       );
+      if (!empty($shipping_info)) {
+        $params['shipping'] = $shipping_info;
+      }
+      //Create the customer in stripe
+      $customer = \Stripe\Customer::create($params);
 
       // Store the customer ID in the session,
       // We'll pick it up later to save it in the database since we might not have a $user object at this point anyway
@@ -515,14 +539,18 @@ function uc_stripe_charge($order_id, $amount, $data) {
       throw new Exception('No customer ID found');
     }
 
-    // charge the Customer the amount in the order
-    $charge = \Stripe\Charge::create(array(
-        "amount" => $amount,
-        "currency" => strtolower($order->currency),
-        "customer" => $stripe_customer_id,
-        "description" => t("Order #@order_id", array("@order_id" => $order_id)),
-      )
+    $params = array(
+      "amount" => $amount,
+      "currency" => strtolower($order->currency),
+      "customer" => $stripe_customer_id,
+      "description" => t("Order #@order_id", array("@order_id" => $order_id)),
     );
+    if (!empty($shipping_info)) {
+      $params['shipping'] = $shipping_info;
+    }
+
+    // charge the Customer the amount in the order
+    $charge = \Stripe\Charge::create($params);
 
     $formatted_amount = $amount / 100;
     $formatted_amount = number_format($formatted_amount, 2);
