@@ -1,4 +1,6 @@
-This is an Ubercart payment gateway module for Stripe.
+This is an Ubercart payment gateway module for Stripe. It maintains PCI SAQ A 
+compliance which allows Stripe, the payment processor, to handle prcoessing and 
+storing of payment card details.
 
 Versions of the Stripe PHP Library and Stripe API that this module currently
 supports are found in uc_stripe_libraries_info() in uc_stripe.module.
@@ -15,9 +17,9 @@ section, and enable the gateway under the Payment Gateways.
 c) On that page, provide your Stripe API keys, from
 https://dashboard.stripe.com/account/apikeys
 
-d) Download and install the Stripe PHP Library version 2.2.0 or >=3.13.0
-from https://github.com/stripe/stripe-php/releases. The recommended technique is
-to use the command
+d) Download and install the Stripe PHP Library version 3.0 with stripe api 
+2016-03-07 or newer from https://github.com/stripe/stripe-php/releases. The 
+recommended technique is to use the command
 
 drush ldl stripe
 
@@ -25,8 +27,7 @@ If you don't use "drush ldl stripe", download and install the Stripe library in
 sites/all/libraries/stripe such that the path to VERSION
 is sites/all/libraries/stripe/VERSION. YOU MUST CLEAR THE CACHE AFTER
 CHANGING THE STRIPE PHP LIBRARY. The Libraries module caches its memory of
-libraries like the Stripe Library.  (Version 2.2.0 support is maintained for
-existing users; version 3.13.0+ supports PHP 7 and will get ongoing support.)
+libraries like the Stripe Library.
 (With the latest version of the libraries module you can use the command:
 
 e) If you are using recurring payments, install version 2.x
@@ -48,10 +49,25 @@ disabled on admin/store/settings/payment/method/credit - uc_credit never sees
 the credit card number, so cannot properly validate it (and we don't want it to
 ever know the credit card number.)
 
-Upgrading from uc_stripe 6.x-1.x or 7.x-1.x
+i) uc_stripe creates it's own payment pane. Ensure the correct ordering by visiting
+store->configuration->checkout (admin/store/settings/checkout).
+
+Upgrading from uc_stripe 6.x-1.x or 7.x-1.x or 7.x-2.x
 ===========================================
 
-7.x-2.x does not use Stripe subscriptions for recurring payments, but instead
+7.x-3.x maintains PCI SAQ A compliance and has major implementation changes from 
+2.x. This version uses it's own payment pane in uc_cart to collect card info.
+The card fields such as card number, expiration date, and cvc code have all been
+ hidden, and is handled entirely by Stripe's Element implementation.
+Which means no credit card information gets processed at all by drupal. The last4,
+and expiration date are sent back to drupal by Stripe's api.
+
+When upgrading from 2.x the ordering of the new stripe payment pane should be
+verified at store->configuration->checkout (admin/store/settings/checkout).
+
+An upgrade of the stripe library is required. See installation step d from above.
+
+7.x-3.x does not use Stripe subscriptions for recurring payments, but instead
 uses the uc_recurring module. This means you have control of recurring
 transactions without having to manage them on the Stripe dashboard. (Credit
 card numbers and sensitive data are *not* stored on your site; only the Stripe
