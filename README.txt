@@ -17,8 +17,8 @@ section, and enable the gateway under the Payment Gateways.
 c) On that page, provide your Stripe API keys, from
 https://dashboard.stripe.com/account/apikeys
 
-d) Download and install the Stripe PHP Library version 3.0 with stripe api 
-2016-03-07 or newer from https://github.com/stripe/stripe-php/releases. The 
+d) Download and install the Stripe PHP Library version 6.38.0 with stripe api 
+2019-05-16 or newer from https://github.com/stripe/stripe-php/releases. The 
 recommended technique is to use the command
 
 drush ldl stripe

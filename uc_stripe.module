@@ -19,7 +19,7 @@ function uc_stripe_libraries_info() {
     'name' => 'Stripe PHP Library',
     'vendor url' => 'http://stripe.com',
     'download url' => 'https://github.com/stripe/stripe-php/releases',
-    'download file url' => 'https://github.com/stripe/stripe-php/archive/v6.5.0.tar.gz',
+    'download file url' => 'https://github.com/stripe/stripe-php/archive/v6.38.0.tar.gz',
     'version arguments' => array(
       'file' => 'VERSION',
       'pattern' => '/(\d+\.\d+\.\d+)/',
@@ -84,14 +84,14 @@ function uc_stripe_libraries_info() {
         ),
         'stripe_api_version' => '2016-03-07',
       ),
-      '6.5.0' => array(
+      '6.38.0' => array(
         'files' => array(
           'php' => array(
             'init.php',
-          ),
+          )
         ),
-        'stripe_api_version' => '2018-02-28',
-      ),
+        'stripe_api_version' => '2019-05-16'
+      )
     ),
   );
 
