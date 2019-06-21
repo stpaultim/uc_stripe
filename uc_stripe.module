@@ -808,6 +808,13 @@ function _uc_stripe_prepare_api() {
   } catch (Exception $e) {
     watchdog('uc_stripe', 'Error setting the Stripe API Key. Payments will not be processed: %error', array('%error' => $e->getMessage()));
   }
+  try{
+    $module_info = system_get_info('module', "uc_stripe");
+    $uc_stripe_version = is_null($module_info['version']) ? 'dev-unknown' : $module_info['version'];
+    \Stripe\Stripe::setAppInfo("Drupal Ubercart Stripe", $uc_stripe_version, "https://www.drupal.org/project/uc_stripe");
+  } catch (Exception $e){
+    watchdog('uc_stripe', 'Error setting Stripe plugin information: %error', array('%error' => $e->getMessage()));
+  }
   return TRUE;
 }
 
