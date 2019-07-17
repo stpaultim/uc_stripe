@@ -35,16 +35,16 @@
         var submitButton = $('.uc-cart-checkout-form #edit-continue');
 
         // Load the js reference to these fields so that on the review page 
-        // we can input the last 4 and expiration date which is returned to us by stripe token call
+        // we can input the last 4 and expiration date which is returned to us by stripe paymentMethod call
         var cc_container = $('.payment-details-credit');
         var cc_num = cc_container.find(':input[id*="edit-panes-payment-details-cc-numbe"]');
         var cc_cvv = cc_container.find(':input[id*="edit-panes-payment-details-cc-cv"]');
         var cc_exp_month = cc_container.find('#edit-panes-payment-details-cc-exp-month');
         var cc_exp_year = cc_container.find('#edit-panes-payment-details-cc-exp-year');
         
-        // Make sure that when the page is being loaded the token value is reset
+        // Make sure that when the page is being loaded the paymentMethod value is reset
         // Browser or other caching might do otherwise.
-        $("[name='panes[payment-stripe][details][stripe_token]']").val('default');
+        $("[name='panes[payment-stripe][details][stripe_payment_method]']").val('default');
 
         // JS must enable the button; otherwise form might disclose cc info. It starts disabled
         submitButton.attr('disabled', false);
@@ -97,24 +97,24 @@
           cc_exp_year = cc_container.find('#edit-panes-payment-details-cc-exp-month');
           cc_exp_month = cc_container.find('#edit-panes-payment-details-cc-exp-year');
 
-          // If not credit card processing or no token field, just let the submit go on
+          // If not credit card processing or no payment method field, just let the submit go on
           // Also continue if we've received the tokenValue
-          var tokenField = $("[name='panes[payment-stripe][details][stripe_token]']");
-          if (!$("div.payment-details-credit").length || !tokenField.length || tokenField.val().indexOf('tok_') == 0) {
+          var paymentMethodField = $("[name='panes[payment-stripe][details][stripe_payment_method]']");
+          if (!$("div.payment-details-credit").length || !paymentMethodField.length || paymentMethodField.val().indexOf('pm_') == 0) {
             return true;
           }
 
           // If we've requested and are waiting for token, prevent any further submit
-          if (tokenField.val() == 'requested') {
+          if (paymentMethodField.val() == 'requested') {
             return false; // Prevent any submit processing until token is received
           }
 
           // Go ahead and request the token
-          tokenField.val('requested');
+          paymentMethodField.val('requested');
 
           try {
             
-            stripe.createToken(card).then(function (response) {
+            stripe.createPaymentMethod('card', card).then(function (response) {
 
               if (response.error) {
 
@@ -142,19 +142,19 @@
                 // And show the hidden original button which has the behavior attached to it.
                 submitButton.show();
 
-                tokenField.val('default'); // Make sure token field set back to default
+                paymentMethodField.val('default'); // Make sure token field set back to default
 
               } else {
                 // token contains id, last4, and card type
-                var token = response.token.id;
+                var paymentMethodId = response.paymentMethod.id;
                 
                 
                 // Insert the token into the form so it gets submitted to the server
-                tokenField.val(token);
+                paymentMethodField.val(paymentMethodId);
                 
                 // set cc expiration date received from stripe so that it is available on checkout review
-                cc_exp_year.val(response.token.card.exp_month);
-                cc_exp_month.val(response.token.card.exp_year);
+                cc_exp_year.val(response.paymentMethod.card.exp_month);
+                cc_exp_month.val(response.paymentMethod.card.exp_year);
                 
                 // Since we're now submitting, make sure that uc_credit doesn't
                 // find values it objects to; after "fixing" set the name back on the
@@ -162,7 +162,7 @@
                 // add dummy tweleve 5's and the last 4 of credit card so that last 4 show
                 cc_num
                   .css('visibility', 'hidden')
-                  .val('555555555555' + response.token.card.last4)
+                  .val('555555555555' + response.paymentMethod.card.last4)
                   .attr('name', 'panes[payment][details][cc_number]');
                 cc_cvv
                   .css('visibility', 'hidden')
