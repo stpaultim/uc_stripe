@@ -2,6 +2,8 @@ This is an Ubercart payment gateway module for Stripe. It maintains PCI SAQ A
 compliance which allows Stripe, the payment processor, to handle prcoessing and 
 storing of payment card details.
 
+It is compliant with 3D Secure, 3D Secure 2, and Strong Customer Authentication (SCA)
+
 Versions of the Stripe PHP Library and Stripe API that this module currently
 supports are found in uc_stripe_libraries_info() in uc_stripe.module.
 
@@ -52,7 +54,7 @@ ever know the credit card number.)
 i) uc_stripe creates it's own payment pane. Ensure the correct ordering by visiting
 store->configuration->checkout (admin/store/settings/checkout).
 
-Upgrading from uc_stripe 6.x-1.x or 7.x-1.x or 7.x-2.x
+Upgrading from uc_stripe 7.x-2.x
 ===========================================
 
 7.x-3.x maintains PCI SAQ A compliance and has major implementation changes from 
@@ -62,16 +64,22 @@ The card fields such as card number, expiration date, and cvc code have all been
 Which means no credit card information gets processed at all by drupal. The last4,
 and expiration date are sent back to drupal by Stripe's api.
 
+7.x-3.x no longer creates a new stripe customer for each order. If a drupal user 
+already has a stripe customer ID, this module will attach future orders to that
+exisiting stripe customer ID.
+
 When upgrading from 2.x the ordering of the new stripe payment pane should be
 verified at store->configuration->checkout (admin/store/settings/checkout).
 
 An upgrade of the stripe library is required. See installation step d from above.
 
-7.x-3.x does not use Stripe subscriptions for recurring payments, but instead
-uses the uc_recurring module. This means you have control of recurring
-transactions without having to manage them on the Stripe dashboard. (Credit
-card numbers and sensitive data are *not* stored on your site; only the Stripe
-customer ID is stored.)
+7.x-3.x Uses the uc_recurring module for recurring payments. It is also equipped 
+to handle recurring payments that require authentication (See the uc_recurring 
+steps below). Exisiting recurring payments set up with 7.x-2.x work without any 
+configuration changes.
+
+Upgrading from uc_stripe 6.x-1.x or 7.x-1.x 
+============================================
 
 The upgrade hooks, however, must move the customer id stored in the obsolete
 uc_recurring_stripe table into the user table. When this happens the old
@@ -99,6 +107,11 @@ retain any valid CC info, only the stripe customer id.
 Recurring payments require automatically triggered renewals using
 uc_recurring_trigger_renewals ("Enabled triggered renewals" must be enabled
 on admin/store/settings/payment/edit/recurring)
+
+You should also set your email message for recurring payments that require
+Authentication. The system will email your customers with a link so that they
+can authenticate and have their payment processed.
+(You can edit from here: admin/store/settings/payment/edit/gateways)
 
 If you were using Stripe subscriptions in v1 of this module, you may have to
 disable those subscriptions in order to not double-charge your customers.
