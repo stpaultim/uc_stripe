@@ -178,7 +178,7 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
   $stripe_payment_form['stripe_card_element'] = array(
     '#prefix' => '<div id="stripe-card-element">',
     '#weight' => - 10,
-    '#markup' => '<div class="stripe-warning">' . t('Sorry, for security reasons your card cannot be processed because Javascript is disabled in your browser.') . '</div>',
+    '#markup' => '<div class="stripe-warning">' . t('Sorry, for security reasons your card cannot be processed. Please refresh this page and try again. If the problem persists please check that Javascript is enabled your browser.') . '</div>',
     '#suffix' => '</div>',
   );
 
