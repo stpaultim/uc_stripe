@@ -27,15 +27,17 @@
             
             $.ajax({
               url: '/uc_stripe/ajax/confirm_payment',
-              method: 'POST',
+              type: "POST",
               data: JSON.stringify({ payment_method_id: methodId, order_id: orderId }),
               contentType: 'application/json;',
               dataType: 'json',
-            }).then(function(result) {
+              success: function(result){
                 handleServerResponse(result);
-//                submitButton.click();
-            // Prevent processing until we get the token back
-          });
+              },
+              error: function(result){
+                handleServerResponse(result);
+              }
+            })
             
           }
           
@@ -60,13 +62,17 @@
                 // The PaymentIntent can be confirmed again on the server
                 $.ajax({
                   url: '/uc_stripe/ajax/confirm_payment',
-                  method: 'POST',
+                  type: 'POST',
                   data: JSON.stringify({ payment_intent_id: result.paymentIntent.id, order_id: orderId }),
                   contentType: 'application/json;',
                   dataType: 'json',
-                }).then(function(confirmResult) {
-                  return confirmResult;
-                }).then(handleServerResponse);
+                  success: function(confirmResult){
+                    return handleServerResponse(confirmResult);
+                  },
+                  error: function(confirmResult){
+                    return handleServerResponse(confirmResult);
+                  },
+                })
               }
             });
           } else {
