@@ -986,7 +986,7 @@ function _uc_stripe_confirm_payment(){
 
   // In the case where the stored customer_id is not a valid customer in Stripe
   // then we'll need to create a new stripe customer. see #3071712
-  if(!_uc_stripe_is_stripe_id_valid($stripe_customer_id)){
+  if($stripe_customer_id && !_uc_stripe_is_stripe_id_valid($stripe_customer_id)){
     watchdog('uc_stripe', 'Stripe customer: @customer is not valid in this instance of Stripe. A new customer will be created.', array('@customer' => $stripe_customer_id));
     $stripe_customer_id = false;
   }
