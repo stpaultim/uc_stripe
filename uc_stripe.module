@@ -739,7 +739,7 @@ function uc_stripe_renew($order, &$fee) {
 
     return TRUE;
 
-  } catch (\Stripe\Error\Base $e) {
+  } catch (\Stripe\Error\Card $e) {
 
     if ($e->getDeclineCode() === 'authentication_required') {
       $NOT_COMPLETED = 0;
@@ -772,8 +772,11 @@ function uc_stripe_renew($order, &$fee) {
 
     uc_order_comment_save($order->order_id, $order->uid, $result['message'], 'admin');
 
-    watchdog('uc_stripe', 'Renewal failed for order @order_id, code=@code, message: @message', array('@order_id' => $order->order_id, '@code' => $result['comment'], '@message' => $result['message']));
+    watchdog('uc_stripe', 'Renewal failed for order @order_id, code=@code, message: @message', array('@order_id' => $order->order_id, '@code' => $e->getCode(), '@message' => $e->getMessage()));
 
+    return FALSE;
+  } catch (Exception $e) {
+    watchdog('uc_stripe', 'Renewal failed for order @order_id, code=@code, message: @message', array('@order_id' => $order->order_id, '@code' => $e->getCode(), '@message' => $e->getMessage()));
     return FALSE;
   }
 
@@ -1038,7 +1041,7 @@ function _uc_stripe_confirm_payment(){
       uc_order_save($order);
     }
     return _generatePaymentResponse($intent);
-  } catch (\Stripe\Error\Base $e) {
+  } catch (Exception $e) {
     watchdog('uc_stripe', 'Payment could not be processed: @message', array('@message' => $e->getMessage()));
     return ['error' => $e->getMessage()];
   }
