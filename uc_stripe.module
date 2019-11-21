@@ -52,13 +52,15 @@ function uc_stripe_menu() {
     'access callback' => true,
     'page callback' => '_uc_stripe_confirm_payment',
     'delivery callback' => 'drupal_json_output',
+    'type' => MENU_CALLBACK,
   );
 
   $items['stripe/authenticate-payment/%'] = array(
     'access callback' => true,
     'page callback' => 'drupal_get_form',
     'page arguments' => array('uc_stripe_authenticate_payment_form', 2),
-    'file' => 'uc_stripe.pages.inc'
+    'type' => MENU_CALLBACK,
+    'file' => 'uc_stripe.pages.inc',
   );
 
 
