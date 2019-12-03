@@ -17,6 +17,7 @@
         
         if (Drupal.settings && Drupal.settings.uc_stripe ) {
           var apikey = Drupal.settings.uc_stripe.apikey;
+          var elementStyles = JSON.parse(Drupal.settings.uc_stripe.element_styles);
           
           var stripe = Stripe(apikey);
           var elements = stripe.elements();
@@ -59,15 +60,9 @@
           cc_num.val('');
         }
         
-        
      // Custom styling can be passed to options when creating an Element.
         var style = {
-          base: {
-            // Add your base input styles here. For example:
-            fontSize: '24px',
-            color: "#000000",
-            iconColor: "blue",
-          }
+          base: elementStyles
         };
         
         // Create an instance of the card Element.

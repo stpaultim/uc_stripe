@@ -209,8 +209,10 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
 
   $apikey = variable_get('uc_stripe_testmode', TRUE) ? check_plain(variable_get('uc_stripe_api_key_test_publishable', '')) : check_plain(variable_get('uc_stripe_api_key_live_publishable', ''));
 
+  $element_styles = json_encode(_uc_stripe_get_element_styles_array());
+
   // Add custom JS and CSS
-  $settings = array('apikey' => $apikey);
+  $settings = array('apikey' => $apikey, 'element_styles' => $element_styles);
   $form['#attached']['js']['https://js.stripe.com/v3/'] = array('type' => 'external');
   $form['#attached']['js'][] = array('data' => array('uc_stripe' => $settings), 'type' => 'setting');
   $form['#attached']['js'][] = drupal_get_path('module', 'uc_stripe') . '/js/uc_stripe.js';
@@ -416,6 +418,13 @@ function uc_stripe_settings_form() {
     '#description' => t('Your Live Stripe API Key. Must be the "publishable" key, not the "secret" one.'),
   );
 
+  $form['uc_stripe_settings']['uc_stripe_element_styles'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Style Settings for Stripe Card Element'),
+    '#description' => t('Enter your style settings. e.g. fontSize: 1em, color: black, iconColor: blue (See all Stripe <a target="_blank" href="https://stripe.com/docs/stripe-js/reference#element-options">style options</a>)'),
+    '#default_value' => variable_get('uc_stripe_element_styles', 'fontSize: 1em, color: black, iconColor: blue'),
+  );
+
   $email_text = _uc_stripe_get_authentication_required_email_text();
 
   $form['uc_stripe_settings']['uc_stripe_authentication_required_email'] = array(
@@ -475,6 +484,14 @@ function uc_stripe_settings_form_validate($form, &$form_state) {
   // Make sure they haven't tried to validate credit card numbers, as uc_stripe will not provide a real one.
   if (!empty($form_state['values']['uc_credit_validate_numbers'])) {
     form_set_error('uc_credit_validate_numbers', t('When used with Ubercart Stripe, "Validate credit card number at checkout" must be unchecked.'));
+  }
+
+  // Make sure that stripe style settings do not have an extra comma at the end.
+  $element_styles = $form_state['values']['uc_stripe_element_styles'];
+  if(!empty($element_styles)){
+    if(substr($element_styles, -1) == ','){
+      form_set_error('uc_stripe_element_styles', t('Stripe Element Styles list should not end with a comma.'));
+    }
   }
 
 }
@@ -1130,4 +1147,25 @@ function _uc_stripe_is_stripe_id_valid($stripe_id){
     // IF customer is not found, an exception is thrown.
     return false;
   }
+}
+
+/**
+ *
+ * @return array styles - An associative array of style overrides from
+ * the settings page.
+ */
+function _uc_stripe_get_element_styles_array(){
+
+  $styles = array();
+  $settings = variable_get('uc_stripe_element_styles', 'fontSize: 1em, color: black, iconColor: blue');
+
+  $pairs = explode(',', $settings);
+  foreach ($pairs as $pair){
+    $keyValue = explode(':', $pair);
+    $key = trim($keyValue[0]);
+    $value = trim($keyValue[1]);
+    $styles[$key] = $value;
+  }
+
+  return $styles;
 }
