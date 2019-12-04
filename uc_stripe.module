@@ -747,6 +747,9 @@ function uc_stripe_renew($order, &$fee) {
       $intent_params['payment_method'] = $stripe_payment_id;
     }
 
+    //Allow other modules to alter recurring $intent params array
+    drupal_alter('uc_stripe_recurring_intent', $intent_params, $order);
+
     $payment_intent = \Stripe\PaymentIntent::create($intent_params);
 
     uc_payment_enter($order->order_id, $order->payment_method, $order->order_total, $fee->uid, $payment_intent, "Success");
@@ -1039,6 +1042,9 @@ function _uc_stripe_confirm_payment(){
       }
 
       $params['customer'] = $stripe_customer_id;
+
+      // Allow other modules to alter payment $intent params array
+      drupal_alter('uc_stripe_payment_intent', $params, $order);
 
       # Create the PaymentIntent
       $intent = \Stripe\PaymentIntent::create($params);
