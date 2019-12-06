@@ -49,6 +49,8 @@
 
         // JS must enable the button; otherwise form might disclose cc info. It starts disabled
         submitButton.attr('disabled', false);
+        // Remove drupal disabled form class
+        submitButton.removeClass('form-button-disabled');
 
         // When this behavior fires, we can clean the form so it will behave properly,
         // Remove 'name' from sensitive form elements so there's no way they can be submitted.
