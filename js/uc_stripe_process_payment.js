@@ -14,19 +14,21 @@
         if (Drupal.settings && Drupal.settings.uc_stripe ) {
           var apikey = Drupal.settings.uc_stripe.apikey;
           var methodId = Drupal.settings.uc_stripe.methodId;
-          var orderId = Drupal.settings.uc_stripe.orderId
+          var orderId = Drupal.settings.uc_stripe.orderId;
           var stripe = Stripe(apikey);
+          var prefix = Drupal.settings.pathPrefix;
         }
         
+        if (!prefix) prefix = '';
+
         var submitButton = $('#edit-submit');
         var processed = false;
 
         submitButton.click(function (e) {
           if(!processed){
             e.preventDefault();
-            
             $.ajax({
-              url: '/uc_stripe/ajax/confirm_payment',
+              url: Drupal.settings.basePath + prefix + 'uc_stripe/ajax/confirm_payment',
               type: "POST",
               data: JSON.stringify({ payment_method_id: methodId, order_id: orderId }),
               contentType: 'application/json;',
@@ -61,7 +63,7 @@
                 // The card action has been handled
                 // The PaymentIntent can be confirmed again on the server
                 $.ajax({
-                  url: '/uc_stripe/ajax/confirm_payment',
+                  url: Drupal.settings.basePath + prefix + 'uc_stripe/ajax/confirm_payment',
                   type: 'POST',
                   data: JSON.stringify({ payment_intent_id: result.paymentIntent.id, order_id: orderId }),
                   contentType: 'application/json;',
