@@ -762,7 +762,7 @@ function uc_stripe_renew($order, &$fee) {
 
     $formatted_amount = number_format($fee->fee_amount, 2);
     $message = t('Card renewal payment of @amount processed successfully.', array('@amount' => $formatted_amount));
-    uc_order_comment_save($fee->order_id, $order->uid, $message, 'order', 'completed', FALSE);
+    uc_order_comment_save($fee->order_id, $order->uid, $message, 'order', 'payment_received', FALSE);
     uc_order_comment_save($fee->order_id, $order->uid, $message, 'admin');
 
     return TRUE;
