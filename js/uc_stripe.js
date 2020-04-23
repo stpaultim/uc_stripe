@@ -75,12 +75,13 @@
         
         // Display errors from stripe
         card.addEventListener('change', function(event) {
-          var displayError = document.getElementById('uc_stripe_messages');
+          var displayError = $('#uc_stripe_messages');
           if (event.error) {
+            displayError.css('visibility', 'visible');
             displayError.textContent = event.error.message;
             console.log(event.error.message)
           } else {
-            displayError.textContent = '';
+            displayError.css('visibility', 'hidden');
           }
         });
 
