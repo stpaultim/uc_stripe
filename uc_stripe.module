@@ -132,12 +132,6 @@ function uc_stripe_form_uc_cart_checkout_review_form_alter(&$form, &$form_state,
     return;
   }
 
-  // When a payment fails, remove the Submit Order button because it will most
-  // likely fail again. Instead, the customer should hit back to try again.
-  if(isset($_SESSION['stripe']['payment_failed'])){
-    $form['actions']['submit']['#type'] = 'hidden';
-  }
-
   $stripe_payment_method_id = $_SESSION['stripe']['payment_method'];
   $order_id = $form_state['uc_order']->order_id;
   $apikey = variable_get('uc_stripe_testmode', TRUE) ? check_plain(variable_get('uc_stripe_api_key_test_publishable', '')) : check_plain(variable_get('uc_stripe_api_key_live_publishable', ''));
@@ -256,11 +250,6 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
   $form['panes']['messages'] = array(
     '#markup' => "<div id='uc_stripe_messages' class='messages error hidden'></div>",
   );
-
-  //Clear any previous card payment failures
-  if(isset($_SESSION['stripe']['payment_failed'])){
-    unset($_SESSION['stripe']['payment_failed']);
-  }
 
   if (uc_credit_default_gateway() == 'uc_stripe') {
     if (variable_get('uc_stripe_testmode', TRUE)) {
@@ -682,8 +671,6 @@ function uc_stripe_charge($order_id, $amount, $data) {
     uc_order_comment_save($order_id, $user->uid, $result['message'], 'admin');
     watchdog('uc_stripe', 'Stripe charge failed for order @order, message: @message', array('@order' => $order_id, '@message' => $result['message']));
 
-    $_SESSION['stripe']['payment_failed'] = TRUE;
-
     return $result;
   }
 
@@ -700,8 +687,6 @@ function uc_stripe_charge($order_id, $amount, $data) {
   uc_order_comment_save($order_id, $user->uid, $result['message'], 'admin');
 
   watchdog('uc_stripe', 'Stripe gateway error for order @order_id', array('order_id' => $order_id));
-
-  $_SESSION['stripe']['payment_failed'] = TRUE;
 
   return $result;
 }
@@ -753,10 +738,13 @@ function uc_stripe_renew($order, &$fee) {
       $intent_params['payment_method'] = $stripe_payment_id;
     }
 
+    // Idempotency key to mark unique requests in Stripe API.
+    $idempotency_key = _uc_stripe_create_idempotency_key($order->order_id . $amount . $stripe_payment_id);
+
     //Allow other modules to alter recurring $intent params array
     drupal_alter('uc_stripe_recurring_intent', $intent_params, $order);
 
-    $payment_intent = \Stripe\PaymentIntent::create($intent_params);
+    $payment_intent = \Stripe\PaymentIntent::create($intent_params, ['idempotency_key' => $idempotency_key]);
 
     uc_payment_enter($order->order_id, $order->payment_method, $order->order_total, $fee->uid, $payment_intent, "Success");
 
@@ -1026,8 +1014,10 @@ function _uc_stripe_confirm_payment(){
   try {
     if (isset($data['payment_method_id'])) {
 
+      $payment_method_id = $data['payment_method_id'];
+
       $params = array(
-          'payment_method' => $data['payment_method_id'],
+          'payment_method' => $payment_method_id,
           "description" => t("Order #@order_id", array("@order_id" => $order_id)),
           'amount' => $amount,
           'currency' => strtolower($order->currency),
@@ -1038,10 +1028,9 @@ function _uc_stripe_confirm_payment(){
       );
 
       if(!$stripe_customer_id) {
-        $customer = _uc_stripe_create_stripe_customer($order, $data['payment_method_id']);
+        $customer = _uc_stripe_create_stripe_customer($order, $payment_method_id);
         if(!$customer){
           $message = 'Customer creation failed.';
-          $_SESSION['stripe']['payment_failed'] = TRUE;
           return ['error' => $message];
         }
         $stripe_customer_id = $customer->id;
@@ -1049,11 +1038,14 @@ function _uc_stripe_confirm_payment(){
 
       $params['customer'] = $stripe_customer_id;
 
+      // Idempotency key to mark unique requests in Stripe API.
+      $idempotency_key = _uc_stripe_create_idempotency_key($order_id . $amount . $payment_method_id);
+
       // Allow other modules to alter payment $intent params array
       drupal_alter('uc_stripe_payment_intent', $params, $order);
 
       # Create the PaymentIntent
-      $intent = \Stripe\PaymentIntent::create($params);
+      $intent = \Stripe\PaymentIntent::create($params, ['idempotency_key' => $idempotency_key]);
 
       if(!$order_has_stripe_id){
         $order->data['stripe_customer_id'] = $stripe_customer_id;
@@ -1180,4 +1172,18 @@ function _uc_stripe_get_element_styles_array(){
   }
 
   return $styles;
+}
+
+/**
+ * Creates an idempotency key to prevent duplicate requests in Stripe API.
+ *
+ * @param string $key
+ *   The string used to make a key.
+ *
+ * @return string
+ *   The idempotency key.
+ */
+function _uc_stripe_create_idempotency_key($key) {
+  $idempotency_key = hash('sha256', $key);
+  return $idempotency_key;
 }
