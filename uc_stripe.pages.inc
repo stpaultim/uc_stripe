@@ -128,7 +128,6 @@ function uc_stripe_authenticate_payment_form_submit($form, &$form_state){
     uc_recurring_fee_user_save($fee);
 
     uc_order_comment_save($order_id, $order->uid, $message, 'admin');
-    uc_order_comment_save($order_id, $order->uid, $message, 'order', 'completed', FALSE);
 
     $form_state['redirect'] = '/';
     drupal_set_message('You have successfully completed your payment');
