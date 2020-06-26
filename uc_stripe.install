@@ -51,6 +51,7 @@ function uc_stripe_requirements($phase) {
   }
 
   // Make sure they don't enable the "Check credit"
+  // TODO This variable was probably removed in Backdrop without replacement.
   if ($phase == 'runtime' && variable_get('uc_credit_validate_numbers', FALSE)) {
     $requirements['uc_stripe_validate_numbers'] = array(
       'title' => t('Stripe Credit Card Validation'),
@@ -72,7 +73,7 @@ function _uc_stripe_load_library() {
   module_load_include('module', 'uc_stripe');
 
   if (($library = libraries_load('stripe')) && !empty($library['loaded']) && class_exists('\Stripe\Stripe')) {
-    return \Stripe\Stripe::VERSION;
+    return Stripe Stripe::VERSION;
   }
   watchdog('uc_stripe', 'Stripe PHP Library not installed or wrong version');
   return FALSE;
@@ -85,18 +86,23 @@ function _uc_stripe_load_library() {
 function uc_stripe_install() {
   // This turns ON the uc_recurring cron task to renew. We want this
   // ON because the renewal payments are handled by uc_recurring and NOT the stripe gateway
+  // TODO This variable was probably removed in Backdrop without replacement.
   variable_set('uc_recurring_trigger_renewals', TRUE);
 
   // Stripe does cc validation, so uc_credit must not... especially because
   // uc_credit gets a bogus cc number.
+  // TODO This variable was probably removed in Backdrop without replacement.
   variable_set('uc_credit_validate_numbers', FALSE);
+  // Dynamically generated variable data was detected on the following lines.
+  // /uc_stripe/uc_stripe.module line 1162
+  // /uc_stripe/uc_stripe.module line 770
 }
 
 /**
  * Implements hook_uninstall().
  */
 function uc_stripe_uninstall() {
-  variable_del('uc_stripe_authentication_required_email');
+  config_clear('uc_stripe.settings', 'uc_stripe_authentication_required_email');
 }
 
 /**
@@ -109,84 +115,48 @@ function uc_stripe_schema() {
       'id' => array(
         'description' => 'id of entry',
         'type' => 'serial',
-        'not null' => TRUE
+        'not null' => TRUE,
       ),
       'order_id' => array(
         'description' => 'Order Id of pending order',
         'type' => 'int',
-        'not null' => TRUE
+        'not null' => TRUE,
       ),
       'rfee_id' => array(
         'description' => 'Recurring Fee Id of pending order',
         'type' => 'int',
-        'not null' => TRUE
+        'not null' => TRUE,
       ),
       'completed' => array(
         'description' => 'Competion status of this pending order',
         'type' => 'int',
-        'not null' => TRUE
+        'not null' => TRUE,
       ),
-      'hash' => array (
+      'hash' => array(
         'description' => 'The unqiue has of order and payment id',
         'type' => 'varchar',
         'length' => '100',
-        'not null' => TRUE
+        'not null' => TRUE,
       ),
     ),
     'unique keys' => array(
       'hash' => array(
-        'hash'
-      )
+        'hash',
+      ),
     ),
     'primary key' => array('id'),
   );
   return $schema;
 }
 
-/**
- * Enable triggered renewals, as uc_recurring manages renewals with this version.
- */
-function uc_stripe_update_7201(&$sandbox) {
-  variable_set('uc_recurring_trigger_renewals', TRUE);
-  variable_set('uc_credit_validate_numbers', FALSE);
+// TODO The old hook_update_N functions cannot be applied to Backdrop.
+function uc_stripe_update_7201(&$sandbox) { }
 
-  return 'Enabled uc_recurring triggered renewals (uc_recurring_trigger_renewals) and required uc_checkout_skip_review';
-}
+// TODO The old hook_update_N functions cannot be applied to Backdrop.
+function uc_stripe_update_7202(&$sandbox) { }
 
-/**
- * Move customer IDs from uc_recurring_stripe into account
- */
-function uc_stripe_update_7202(&$sandbox) {
-  $ret = array();
-  $sandbox['per_run'] = 100;  // users per run
-  $sandbox['#finished'] = 0;
-
-  if (db_table_exists('uc_recurring_stripe')) {
-    if (!isset($sandbox['progress'])) {
-      $sandbox['progress'] = 0;
-      $sandbox['max'] = db_query('
-        SELECT COUNT(DISTINCT(u.uid))
-        FROM {users} u JOIN {uc_recurring_stripe} urs
-        ON (u.uid = urs.uid)
-        WHERE urs.active = 1
-    ')->fetchField();
-    }
-
-
-    _uc_stripe_move_customer_id($sandbox);
-    return "Updated {$sandbox['progress']} of {$sandbox['max']} uc_recurring_stripe rows into user objects";
-  }
-  else {
-    return 'Old uc_recurring_stripe table did not exist, no action taken.';
-  }
-}
-
-/**
- * Make sure cached library information is not used.
- */
-function uc_stripe_update_7203(&$sandbox) {
-  cache_clear_all('stripe', 'cache_libraries');
-}
+// TODO The old hook_update_N functions cannot be applied to Backdrop.
+function uc_stripe_update_7203(&$sandbox) { }
 
 /**
  * Move customer ids from uc_recurring_stripe into user account
@@ -228,65 +198,44 @@ function _uc_stripe_move_customer_id(&$sandbox) {
 
   if ($sandbox['progress'] >= $sandbox['max'] || $result->rowCount() == 0) {
     $sandbox['#finished'] = 1;
-  } else  {
+  }
+  else {
     $sandbox['#finished'] = $sandbox['progress'] / $sandbox['max'];
   }
 }
 
+// TODO The old hook_update_N functions cannot be applied to Backdrop.
+function uc_stripe_update_7301() { }
+
+// TODO The old hook_update_N functions cannot be applied to Backdrop.
+function uc_stripe_update_7302() { }
+
 /**
- * Creates table to track orders that require extra authentication verification.
+ * Implements hook_update_last_removed().
  */
-function uc_stripe_update_7301() {
-
-  $table = array(
-    'description' => 'Ubercart Stripe - Track orders pending authentication',
-    'fields' => array(
-      'id' => array(
-        'description' => 'id of entry',
-        'type' => 'serial',
-        'not null' => TRUE
-      ),
-      'order_id' => array(
-        'description' => 'Order Id of pending order',
-        'type' => 'int',
-        'not null' => TRUE
-      ),
-      'rfee_id' => array(
-        'description' => 'Recurring Fee Id of pending order',
-        'type' => 'int',
-        'not null' => TRUE
-      ),
-      'completed' => array(
-        'description' => 'Competion status of this pending order',
-        'type' => 'int',
-        'not null' => TRUE
-      ),
-      'hash' => array(
-        'description' => 'The unqiue has of order and payment id',
-        'type' => 'varchar',
-        'length' => '100',
-        'not null' => TRUE
-      ),
-    ),
-    'unique keys' => array(
-      'hash' => array(
-        'hash'
-      )
-    ),
-    'primary key' => array('id'),
-  );
-
-  db_create_table('uc_stripe_pending_auth', $table);
+function uc_stripe_update_last_removed() {
+  return 7302;
 }
 
 /**
- * Changes typo in variable uc_stripe_authenticaiton_required_email.
+ * Implements hook_update_N().
  */
-function uc_stripe_update_7302() {
-  $typo_var_name = 'uc_stripe_authenticaiton_required_email';
-  $value = variable_get($typo_var_name, '');
-  if (!empty($value)) {
-    variable_set('uc_stripe_authentication_required_email', $value);
-    variable_del($typo_var_name);
-  }
+function uc_stripe_update_1000() {
+  $config = config('uc_stripe.settings');
+  $config->set('uc_stripe_testmode', update_variable_get('uc_stripe_testmode', 'TRUE'));
+  $config->set('uc_stripe_api_key_test_publishable', update_variable_get('uc_stripe_api_key_test_publishable', ''));
+  $config->set('uc_stripe_api_key_live_publishable', update_variable_get('uc_stripe_api_key_live_publishable', ''));
+  $config->set('uc_stripe_poweredby', update_variable_get('uc_stripe_poweredby', 'FALSE'));
+  $config->set('uc_stripe_api_key_test_secret', update_variable_get('uc_stripe_api_key_test_secret', 'FALSE'));
+  $config->set('uc_stripe_api_key_live_secret', update_variable_get('uc_stripe_api_key_live_secret', 'FALSE'));
+  $config->set('uc_stripe_element_styles', update_variable_get('uc_stripe_element_styles', 'dynamic value in file /uc_stripe/uc_stripe.module line 1162'));
+  $config->set('uc_stripe_authentication_required_email', update_variable_get('uc_stripe_authentication_required_email', 'dynamic value in file /uc_stripe/uc_stripe.module line 770'));
+  update_variable_del('uc_stripe_testmode');
+  update_variable_del('uc_stripe_api_key_test_publishable');
+  update_variable_del('uc_stripe_api_key_live_publishable');
+  update_variable_del('uc_stripe_poweredby');
+  update_variable_del('uc_stripe_api_key_test_secret');
+  update_variable_del('uc_stripe_api_key_live_secret');
+  update_variable_del('uc_stripe_element_styles');
+  update_variable_del('uc_stripe_authentication_required_email');
 }

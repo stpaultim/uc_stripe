@@ -1,0 +1,11 @@
+{
+    "_config_name": "uc_stripe.settings",
+    "uc_stripe_testmode": "TRUE",
+    "uc_stripe_api_key_test_publishable": "",
+    "uc_stripe_api_key_live_publishable": "",
+    "uc_stripe_poweredby": "FALSE",
+    "uc_stripe_api_key_test_secret": "FALSE",
+    "uc_stripe_api_key_live_secret": "FALSE",
+    "uc_stripe_element_styles": "dynamic value in file /uc_stripe/uc_stripe.module line 1162",
+    "uc_stripe_authentication_required_email": "dynamic value in file /uc_stripe/uc_stripe.module line 770"
+}

@@ -6,7 +6,7 @@
  */
 (function ($) {
 
-  Drupal.behaviors.uc_stripe = {
+  Backdrop.behaviors.uc_stripe = {
     attach: function (context) {
       
       // Once function prevents stripe from reloading. Any dom changes to stripe area will destroy element
@@ -15,9 +15,9 @@
         
         var stripe_card_element = '#stripe-card-element';
         
-        if (Drupal.settings && Drupal.settings.uc_stripe ) {
-          var apikey = Drupal.settings.uc_stripe.apikey;
-          var elementStyles = JSON.parse(Drupal.settings.uc_stripe.element_styles);
+        if (Backdrop.settings && Backdrop.settings.uc_stripe ) {
+          var apikey = Backdrop.settings.uc_stripe.apikey;
+          var elementStyles = JSON.parse(Backdrop.settings.uc_stripe.element_styles);
           
           var stripe = Stripe(apikey);
           var elements = stripe.elements();
@@ -49,7 +49,7 @@
 
         // JS must enable the button; otherwise form might disclose cc info. It starts disabled
         submitButton.attr('disabled', false);
-        // Remove drupal disabled form class
+        // Remove backdrop disabled form class
         submitButton.removeClass('form-button-disabled');
 
         // When this behavior fires, we can clean the form so it will behave properly,
@@ -167,7 +167,7 @@
                   .val('999')
                   .attr('name', 'panes[payment][details][cc_cvv]');
 
-                // now actually submit to Drupal. The only "real" things going
+                // now actually submit to Backdrop. The only "real" things going
                 // are the token and the expiration date and last 4 of cc
                 submitButton.click();
               }

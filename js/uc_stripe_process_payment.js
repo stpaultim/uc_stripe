@@ -6,17 +6,17 @@
  */
 (function ($) {
 
-  Drupal.behaviors.uc_stripe_process_payment = {
+  Backdrop.behaviors.uc_stripe_process_payment = {
     attach: function (context) {
       
       $('#uc-cart-checkout-review-form, #uc-stripe-authenticate-payment-form', context).once('uc_stripe', function(){
         
-        if (Drupal.settings && Drupal.settings.uc_stripe ) {
-          var apikey = Drupal.settings.uc_stripe.apikey;
-          var methodId = Drupal.settings.uc_stripe.methodId;
-          var orderId = Drupal.settings.uc_stripe.orderId;
+        if (Backdrop.settings && Backdrop.settings.uc_stripe ) {
+          var apikey = Backdrop.settings.uc_stripe.apikey;
+          var methodId = Backdrop.settings.uc_stripe.methodId;
+          var orderId = Backdrop.settings.uc_stripe.orderId;
           var stripe = Stripe(apikey);
-          var prefix = Drupal.settings.pathPrefix;
+          var prefix = Backdrop.settings.pathPrefix;
         }
         
         if (!prefix) prefix = '';
@@ -28,7 +28,7 @@
           if(!processed){
             e.preventDefault();
             $.ajax({
-              url: Drupal.settings.basePath + prefix + 'uc_stripe/ajax/confirm_payment',
+              url: Backdrop.settings.basePath + prefix + 'uc_stripe/ajax/confirm_payment',
               type: "POST",
               data: JSON.stringify({ payment_method_id: methodId, order_id: orderId }),
               contentType: 'application/json;',
@@ -63,7 +63,7 @@
                 // The card action has been handled
                 // The PaymentIntent can be confirmed again on the server
                 $.ajax({
-                  url: Drupal.settings.basePath + prefix + 'uc_stripe/ajax/confirm_payment',
+                  url: Backdrop.settings.basePath + prefix + 'uc_stripe/ajax/confirm_payment',
                   type: 'POST',
                   data: JSON.stringify({ payment_intent_id: result.paymentIntent.id, order_id: orderId }),
                   contentType: 'application/json;',

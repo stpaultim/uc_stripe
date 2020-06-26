@@ -51,7 +51,7 @@ function drush_uc_stripe_subscription_cancel($order_id = 'all') {
 
   $library = libraries_load('stripe');
   $info = libraries_info('stripe');
-  if (!$library['loaded'] || !array_key_exists(\Stripe\Stripe::VERSION, $info['versions'])) {
+  if (!$library['loaded'] || !array_key_exists(Stripe Stripe::VERSION, $info['versions'])) {
     drush_print("Failed to load one of the supported Stripe PHP library versions: " . join(', ', array_keys($info['versions'])));
     return;
   }
@@ -61,7 +61,7 @@ function drush_uc_stripe_subscription_cancel($order_id = 'all') {
   }
   _uc_stripe_prepare_api();
   $query = db_select('uc_recurring_stripe', 'urs', array('fetch' => PDO::FETCH_ASSOC))
-    ->fields('urs', array('uid', 'customer_id', 'order_id' ));
+    ->fields('urs', array('uid', 'customer_id', 'order_id'));
 
   if ($order_id != 'all') {
     $query->condition('order_id', ':id');
@@ -73,9 +73,10 @@ function drush_uc_stripe_subscription_cancel($order_id = 'all') {
     $account = user_load($item['uid']);
 
     try {
-      $customer = \Stripe\Customer::retrieve($item['customer_id']);
+      $customer = Stripe Customer::retrieve($item['customer_id']);
       $subscriptions = $customer->subscriptions->all();
-    } catch (Exception $e) {
+    }
+    catch (Exception $e) {
       drush_print("Failed to retrieve customer subscriptions for {$item['customer_id']} (user:$account->name}. Message: {$e->getMessage()}");
       continue;
     }
@@ -90,7 +91,8 @@ function drush_uc_stripe_subscription_cancel($order_id = 'all') {
         try {
           $sub->cancel();
           drush_print("    Cancelled subscription {$sub->id}");
-        } catch (Exception $e) {
+        }
+        catch (Exception $e) {
           drush_print("    FAILED to cancel subscription {$sub->id} Message: {$e->getMessage()}");
         }
       }

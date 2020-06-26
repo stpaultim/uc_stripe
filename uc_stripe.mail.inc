@@ -4,7 +4,7 @@
  * This function returns the default off session authention email text.
  * @return $text - Email text
  */
-function _uc_stripe_get_authentication_required_email_text(){
+function _uc_stripe_get_authentication_required_email_text() {
   $text = t("Dear [user:name],
 
 We were unable to process your subscription payment.
@@ -38,7 +38,7 @@ Please visit this link to return to our site and complete the verification step.
  *   Unused parameter required by the token_replace() function. */
 function uc_stripe_mail_tokens(&$replacements, $data, $options) {
   global $base_url;
-  $replacements['[uc_stripe:verification-link]'] = $base_url.'/stripe/authenticate-payment/'.$data['authentication_key'];
+  $replacements['[uc_stripe:verification-link]'] = $base_url . '/stripe/authenticate-payment/' . $data['authentication_key'];
 }
 
 /**
@@ -49,12 +49,15 @@ function uc_stripe_mail_tokens(&$replacements, $data, $options) {
 function uc_stripe_mail($key, &$message, $params) {
 
   switch ($key) {
-    case 'authentication_required' :
+    case 'authentication_required':
 
       $message['subject'] = t('Additional Verification Required to Process Subscription.');
-      $variables = array('user' => $params['user'], 'authentication_key' => $params['hash']);
+      $variables = array(
+        'user' => $params['user'],
+        'authentication_key' => $params['hash'],
+      );
 
-      $message['body'][]= token_replace($params['body'], $variables, array('language' => language_default(), 'callback' => 'uc_stripe_mail_tokens', 'sanitize' => FALSE, 'clear' => TRUE));
+      $message['body'][] = token_replace($params['body'], $variables, array('language' => language_default(), 'callback' => 'uc_stripe_mail_tokens', 'sanitize' => FALSE, 'clear' => TRUE));
 
       break;
   }

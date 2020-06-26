@@ -7,6 +7,7 @@
  * to be processed.
  */
 function uc_stripe_authenticate_payment_form($form, &$form_state, $hash) {
+  $config = config('uc_stripe.settings');
   $form = array();
 
   $pending_order = db_select('uc_stripe_pending_auth', 'u')
@@ -16,9 +17,9 @@ function uc_stripe_authenticate_payment_form($form, &$form_state, $hash) {
   ->fetchObject();
 
 
-  if(!$pending_order){
+  if (!$pending_order) {
     $form['error'] = array(
-        '#markup' => t('Sorry, we could not verify your payment details. Please verify the link and try again. Contact support if the problem persists.'),
+      '#markup' => t('Sorry, we could not verify your payment details. Please verify the link and try again. Contact support if the problem persists.'),
     );
     return $form;
   }
@@ -29,10 +30,10 @@ function uc_stripe_authenticate_payment_form($form, &$form_state, $hash) {
 
   if ($completed) {
     $form['error'] = array(
-        '#markup' => t('This payment has already been verified.'),
+      '#markup' => t('This payment has already been verified.'),
     );
     return $form;
-  };
+  }
 
   $form['heading'] = array(
     '#markup' => t('<p>Your financial institution has requested additional verification to process your scheduled payment.</p>'),
@@ -44,18 +45,18 @@ function uc_stripe_authenticate_payment_form($form, &$form_state, $hash) {
   );
 
   $form['rfee_id'] = array(
-      '#type' => 'hidden',
-      '#value' => $rfee_id,
+    '#type' => 'hidden',
+    '#value' => $rfee_id,
   );
 
   $form['hash'] = array(
-      '#type' => 'hidden',
-      '#value' => $hash,
+    '#type' => 'hidden',
+    '#value' => $hash,
   );
 
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Verify Payment')
+    '#value' => t('Verify Payment'),
   );
 
   $order = uc_order_load($order_id);
@@ -64,19 +65,30 @@ function uc_stripe_authenticate_payment_form($form, &$form_state, $hash) {
   $stripe_customer_id = _uc_stripe_get_customer_id($user->uid);
 
   $order_id = $order_id;
-  $apikey = variable_get('uc_stripe_testmode', TRUE) ? check_plain(variable_get('uc_stripe_api_key_test_publishable', '')) : check_plain(variable_get('uc_stripe_api_key_live_publishable', ''));
-  $settings = array('apikey' => $apikey, 'methodId' => $payment_method_id, 'orderId' => $order_id);
+  $apikey = $config->get('uc_stripe_testmode') ? check_plain($config->get('uc_stripe_api_key_test_publishable')) : check_plain($config->get('uc_stripe_api_key_live_publishable'));
+  $settings = array(
+    'apikey' => $apikey,
+    'methodId' => $payment_method_id,
+    'orderId' => $order_id,
+  );
 
   //Attach Stripe v3 JS library and JS for processing payment
   $form['#attached']['js']['https://js.stripe.com/v3/'] = array('type' => 'external');
-  $form['#attached']['js'][] = array('data' => array('uc_stripe' => $settings), 'type' => 'setting');
-  $form['#attached']['js'][] = drupal_get_path('module', 'uc_stripe') . '/js/uc_stripe_process_payment.js';
-  $form['#attached']['css'][] = drupal_get_path('module', 'uc_stripe') . '/css/uc_stripe.css';
+  $form['#attached']['js'][] = array(
+    'data' => array('uc_stripe' => $settings),
+    'type' => 'setting',
+  );
+  $form['#attached']['js'][] = backdrop_get_path('module', 'uc_stripe') . '/js/uc_stripe_process_payment.js';
+  $form['#attached']['css'][] = backdrop_get_path('module', 'uc_stripe') . '/css/uc_stripe.css';
 
   return $form;
 }
 
-function uc_stripe_authenticate_payment_form_submit($form, &$form_state){
+/**
+ * @todo Please document this function.
+ * @see http://drupal.org/node/1354
+ */
+function uc_stripe_authenticate_payment_form_submit($form, &$form_state) {
 
   $order_id = $form_state['values']['order_id'];
   $rfee_id = $form_state['values']['rfee_id'];
@@ -85,9 +97,9 @@ function uc_stripe_authenticate_payment_form_submit($form, &$form_state){
   $order = uc_order_load($order_id);
   $intent_id = $order->data['payment_intent_id'];
 
-  try{
+  try {
     _uc_stripe_prepare_api();
-    $payment_intent = \Stripe\PaymentIntent::retrieve($intent_id);
+    $payment_intent = Stripe PaymentIntent::retrieve($intent_id);
 
     if ($payment_intent->status != 'succeeded') {
       throw new Exception('Payment intent failed');
@@ -106,7 +118,7 @@ function uc_stripe_authenticate_payment_form_submit($form, &$form_state){
     // there were multiple attempts to process the subscription.
     db_update('uc_stripe_pending_auth')
     ->fields(array(
-        'completed' => $COMPLETED,
+      'completed' => $COMPLETED,
     ))
     ->condition('order_id', $order_id)
     ->condition('rfee_id', $rfee_id)
@@ -130,19 +142,21 @@ function uc_stripe_authenticate_payment_form_submit($form, &$form_state){
     uc_order_comment_save($order_id, $order->uid, $message, 'admin');
 
     $form_state['redirect'] = '/';
-    drupal_set_message('You have successfully completed your payment');
+    backdrop_set_message('You have successfully completed your payment');
 
-  } catch (Exception $e) {
+  }
+  catch (Exception $e) {
 
     $message = t("Stripe Charge Failed for order !order: !message", array(
-        "!order" => $order_id,
-        "!message" => $e->getMessage()
+      "!order" => $order_id,
+      "!message" => $e->getMessage(),
     ));
 
     uc_order_comment_save($order_id, $order->uid, $message, 'admin');
     watchdog('uc_stripe', 'Stripe charge failed for order @order, message: @message', array('@order' => $order_id, '@message' => $message));
+    // TODO This variable was probably removed in Backdrop without replacement.
     $fail_message = variable_get('uc_credit_fail_message', t('We were unable to process your credit card payment. Please verify your details and try again.  If the problem persists, contact us to complete your order.'));
-    drupal_set_message($fail_message, 'error');
+    backdrop_set_message($fail_message, 'error');
 
   }
 }
