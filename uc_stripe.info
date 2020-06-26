@@ -1,10 +1,9 @@
 name = Ubercart Stripe
 description = Ubercart payment gateway for Stripe.
-dependencies[] = uc_payment
-dependencies[] = uc_credit
-dependencies[] = libraries
 package = Ubercart - payment
 backdrop = 1.x
 type = module
-php = 5.3
 
+dependencies[] = uc_payment
+dependencies[] = uc_credit
+dependencies[] = stripe  (>=2.0.0)

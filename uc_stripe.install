@@ -10,6 +10,7 @@
  * Implements hook_requirements().
  */
 function uc_stripe_requirements($phase) {
+  //TODO: Move this cURL check into the Stripe module
   $t = get_t();
   $has_curl = function_exists('curl_init');
 
@@ -23,36 +24,8 @@ function uc_stripe_requirements($phase) {
     $requirements['uc_stripe_curl']['description'] = $t("The Stripe API requires the PHP <a href='!curl_url'>cURL</a> library.", array('!curl_url' => 'http://php.net/manual/en/curl.setup.php'));
   }
 
-  // libraries_info() doesn't work until the module is installed, so allow to be
-  // installed without the library. Then warn at that point.
-  if ($phase != 'install') {
-    $php_api_version = _uc_stripe_load_library();
-    $requirements['uc_stripe_api'] = array(
-      'title' => $t('Stripe PHP Library'),
-      'value' => $t('Version !version', array('!version' => $php_api_version)),
-    );
-    if (empty($php_api_version)) {
-      $requirements['uc_stripe_api']['value'] = $t('Not installed or wrong version');
-      $requirements['uc_stripe_api']['severity'] = REQUIREMENT_ERROR;
-      $requirements['uc_stripe_api']['description'] = $t('Please install a compatible version of the Stripe PHP Library versions as described in the README.txt');
-    }
-  }
-
-
-  $requirements['uc_stripe_keys'] = array(
-    'title' => $t('Stripe API Keys'),
-    'value' => $t('Configured'),
-  );
-  if ($phase == 'runtime' && !_uc_stripe_check_api_keys()) {
-    $requirements['uc_stripe_keys']['title'] = $t('Stripe API Keys.');
-    $requirements['uc_stripe_keys']['value'] = $t('Not configured');
-    $requirements['uc_stripe_keys']['severity'] = REQUIREMENT_ERROR;
-    $requirements['uc_stripe_keys']['description'] = $t('The Stripe API keys are not fully configured.');
-  }
-
   // Make sure they don't enable the "Check credit"
-  // TODO This variable was probably removed in Backdrop without replacement.
-  if ($phase == 'runtime' && variable_get('uc_credit_validate_numbers', FALSE)) {
+  if ($phase == 'runtime' && config_get('uc_credit', 'uc_credit_validate_numbers')) {
     $requirements['uc_stripe_validate_numbers'] = array(
       'title' => t('Stripe Credit Card Validation'),
       'value' => t('Enabled'),
@@ -71,9 +44,9 @@ function uc_stripe_requirements($phase) {
  */
 function _uc_stripe_load_library() {
   module_load_include('module', 'uc_stripe');
-
-  if (($library = libraries_load('stripe')) && !empty($library['loaded']) && class_exists('\Stripe\Stripe')) {
-    return Stripe Stripe::VERSION;
+  $library = stripe_load_library();
+  if ($library['included'] && class_exists('\Stripe\Stripe')) {
+    return \Stripe\Stripe::VERSION;
   }
   watchdog('uc_stripe', 'Stripe PHP Library not installed or wrong version');
   return FALSE;
@@ -84,25 +57,22 @@ function _uc_stripe_load_library() {
  * Implements hook_install().
  */
 function uc_stripe_install() {
-  // This turns ON the uc_recurring cron task to renew. We want this
-  // ON because the renewal payments are handled by uc_recurring and NOT the stripe gateway
-  // TODO This variable was probably removed in Backdrop without replacement.
-  variable_set('uc_recurring_trigger_renewals', TRUE);
+  if (module_exists('uc_recurring')) {
+    // This turns ON the uc_recurring cron task to renew. We want this
+    // ON because the renewal payments are handled by uc_recurring and NOT the stripe gateway
+    config_set('uc_recurring', 'trigger_renewals', TRUE);
+  }
 
   // Stripe does cc validation, so uc_credit must not... especially because
   // uc_credit gets a bogus cc number.
-  // TODO This variable was probably removed in Backdrop without replacement.
-  variable_set('uc_credit_validate_numbers', FALSE);
-  // Dynamically generated variable data was detected on the following lines.
-  // /uc_stripe/uc_stripe.module line 1162
-  // /uc_stripe/uc_stripe.module line 770
+  config_set('uc_credit', 'uc_credit_validate_numbers', FALSE);
 }
 
 /**
  * Implements hook_uninstall().
  */
 function uc_stripe_uninstall() {
-  config_clear('uc_stripe.settings', 'uc_stripe_authentication_required_email');
+
 }
 
 /**
@@ -148,15 +118,6 @@ function uc_stripe_schema() {
   );
   return $schema;
 }
-
-// TODO The old hook_update_N functions cannot be applied to Backdrop.
-function uc_stripe_update_7201(&$sandbox) { }
-
-// TODO The old hook_update_N functions cannot be applied to Backdrop.
-function uc_stripe_update_7202(&$sandbox) { }
-
-// TODO The old hook_update_N functions cannot be applied to Backdrop.
-function uc_stripe_update_7203(&$sandbox) { }
 
 /**
  * Move customer ids from uc_recurring_stripe into user account
@@ -204,12 +165,6 @@ function _uc_stripe_move_customer_id(&$sandbox) {
   }
 }
 
-// TODO The old hook_update_N functions cannot be applied to Backdrop.
-function uc_stripe_update_7301() { }
-
-// TODO The old hook_update_N functions cannot be applied to Backdrop.
-function uc_stripe_update_7302() { }
-
 /**
  * Implements hook_update_last_removed().
  */
@@ -222,14 +177,9 @@ function uc_stripe_update_last_removed() {
  */
 function uc_stripe_update_1000() {
   $config = config('uc_stripe.settings');
-  $config->set('uc_stripe_testmode', update_variable_get('uc_stripe_testmode', 'TRUE'));
-  $config->set('uc_stripe_api_key_test_publishable', update_variable_get('uc_stripe_api_key_test_publishable', ''));
-  $config->set('uc_stripe_api_key_live_publishable', update_variable_get('uc_stripe_api_key_live_publishable', ''));
-  $config->set('uc_stripe_poweredby', update_variable_get('uc_stripe_poweredby', 'FALSE'));
-  $config->set('uc_stripe_api_key_test_secret', update_variable_get('uc_stripe_api_key_test_secret', 'FALSE'));
-  $config->set('uc_stripe_api_key_live_secret', update_variable_get('uc_stripe_api_key_live_secret', 'FALSE'));
-  $config->set('uc_stripe_element_styles', update_variable_get('uc_stripe_element_styles', 'dynamic value in file /uc_stripe/uc_stripe.module line 1162'));
-  $config->set('uc_stripe_authentication_required_email', update_variable_get('uc_stripe_authentication_required_email', 'dynamic value in file /uc_stripe/uc_stripe.module line 770'));
+  $config->set('poweredby', update_variable_get('uc_stripe_poweredby', FALSE));
+  $config->set('element_styles', update_variable_get('uc_stripe_element_styles', ''));
+  $config->set('authentication_required_email', update_variable_get('uc_stripe_authentication_required_email', ''));
   update_variable_del('uc_stripe_testmode');
   update_variable_del('uc_stripe_api_key_test_publishable');
   update_variable_del('uc_stripe_api_key_live_publishable');

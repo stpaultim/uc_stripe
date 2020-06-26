@@ -65,9 +65,8 @@ function uc_stripe_authenticate_payment_form($form, &$form_state, $hash) {
   $stripe_customer_id = _uc_stripe_get_customer_id($user->uid);
 
   $order_id = $order_id;
-  $apikey = $config->get('uc_stripe_testmode') ? check_plain($config->get('uc_stripe_api_key_test_publishable')) : check_plain($config->get('uc_stripe_api_key_live_publishable'));
   $settings = array(
-    'apikey' => $apikey,
+    'apikey' => stripe_get_public_key(),
     'methodId' => $payment_method_id,
     'orderId' => $order_id,
   );

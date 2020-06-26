@@ -44,7 +44,7 @@ function uc_stripe_mail_tokens(&$replacements, $data, $options) {
 /**
  * Implements hook_mail().
  *
- * Send mail and replace token with authenticaion link.
+ * Send mail and replace token with authentication link.
  */
 function uc_stripe_mail($key, &$message, $params) {
 

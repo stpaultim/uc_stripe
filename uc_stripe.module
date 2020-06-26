@@ -7,44 +7,18 @@
  * http://bitcookie.com/blog/pci-compliant-ubercart-and-stripe-js
  * from discussion in the uc_stripe issue queue,
  * https://www.drupal.org/node/1467886
+ * Ported from Drupal 7 to Backdrop by Laryn Kragt Bakker, CEDC.org
  */
 
 /**
- * Implements hook_libraries_info() to define what files should be loaded.
+ * Implements hook_library_info() to define what files should be loaded.
  *
  * @return mixed
  */
+ 
+define('UC_STRIPE_API_VERSION', '2019-05-16');
 
 module_load_include('inc', 'uc_stripe', 'uc_stripe.mail');
-
-/**
- * @todo Please document this function.
- * @see http://drupal.org/node/1354
- */
-function uc_stripe_libraries_info() {
-  $libraries['stripe'] = array(
-    'name' => 'Stripe PHP Library',
-    'vendor url' => 'http://stripe.com',
-    'download url' => 'https://github.com/stripe/stripe-php/releases',
-    'download file url' => 'https://github.com/stripe/stripe-php/archive/v6.38.0.tar.gz',
-    'version arguments' => array(
-      'file' => 'VERSION',
-      'pattern' => '/(\d+\.\d+\.\d+)/',
-    ),
-    'versions' => array(
-      '6.38.0' => array(
-        'files' => array(
-          'php' => array(
-            'init.php',
-          ),
-        ),
-        'stripe_api_version' => '2019-05-16',
-      ),
-    ),
-  );
-
-  return $libraries;
-}
 
 /**
  * Implements hook_menu().
@@ -131,8 +105,6 @@ function uc_stripe_config_info() {
  *
  */
 function uc_stripe_form_uc_cart_checkout_review_form_alter(&$form, &$form_state, $form_id) {
-  $config = config('uc_stripe.settings');
-
   //This alter hook should only take action when payment method is credit.
   if ($form_state['uc_order']->payment_method != 'credit' || uc_credit_default_gateway() != 'uc_stripe') {
     return;
@@ -141,8 +113,7 @@ function uc_stripe_form_uc_cart_checkout_review_form_alter(&$form, &$form_state,
   // If payment method is not found, hide submit button, and show error to user
   if (empty($_SESSION['stripe']['payment_method'])) {
     $form['actions']['submit']['#type'] = 'hidden';
-    // TODO This variable was probably removed in Backdrop without replacement.
-    $fail_message = variable_get('uc_credit_fail_message', t('We were unable to process your credit card payment. Please verify your details and try again.  If the problem persists, contact us to complete your order.'));
+    $fail_message = config_get('uc_credit.settings', 'uc_credit_fail_message', t('We were unable to process your credit card payment. Please verify your details and try again.  If the problem persists, contact us to complete your order.'));
     watchdog('uc_stripe', 'Stripe charge failed for order @order, message: @message', array('@order' => $form_state['uc_order']->order_id, '@message' => 'Payment method not found'));
     backdrop_set_message($fail_message, 'error');
     return;
@@ -150,10 +121,9 @@ function uc_stripe_form_uc_cart_checkout_review_form_alter(&$form, &$form_state,
 
   $stripe_payment_method_id = $_SESSION['stripe']['payment_method'];
   $order_id = $form_state['uc_order']->order_id;
-  $apikey = $config->get('uc_stripe_testmode') ? check_plain($config->get('uc_stripe_api_key_test_publishable')) : check_plain($config->get('uc_stripe_api_key_live_publishable'));
   $settings = array(
     'methodId' => $stripe_payment_method_id,
-    'apikey' => $apikey,
+    'apikey' => stripe_get_public_key(),
     'orderId' => $order_id,
   );
 
@@ -209,7 +179,7 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
   );
 
   // Powered by Stripe (logo from https://stripe.com/about/resources)
-  if ($config->get('uc_stripe_poweredby')) {
+  if ($config->get('poweredby')) {
     $stripe_payment_form['powered_by_stripe'] = array(
       '#type' => 'item',
       '#markup' => "<a target='_blank' href='http://stripe.com'><img src=" . '/' . backdrop_get_path('module', 'uc_stripe') . '/images/solid-dark.svg' . " alt='Powered by Stripe'></a>",
@@ -231,13 +201,11 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
   }
   $form['actions']['continue']['#attributes']['disabled'] = 'disabled';
 
-  $apikey = $config->get('uc_stripe_testmode') ? check_plain($config->get('uc_stripe_api_key_test_publishable')) : check_plain($config->get('uc_stripe_api_key_live_publishable'));
-
   $element_styles = json_encode(_uc_stripe_get_element_styles_array());
 
   // Add custom JS and CSS
   $settings = array(
-    'apikey' => $apikey,
+    'apikey' => stripe_get_public_key(),
     'element_styles' => $element_styles,
   );
   $form['#attached']['js']['https://js.stripe.com/v3/'] = array('type' => 'external');
@@ -282,7 +250,7 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
   );
 
   if (uc_credit_default_gateway() == 'uc_stripe') {
-    if ($config->get('uc_stripe_testmode')) {
+    if (config_get('stripe.settings', 'mode') == 'test') {
       $form['panes']['testmode'] = array(
         '#prefix' => "<div class='messages' style='background-color:#BEEBBF'>",
         '#markup' => t("Test mode is <strong>ON</strong> for the Stripe Payment Gateway. Your  card will not be charged. To change this setting, edit the !link", array('!link' => l("Stripe settings", "admin/store/settings/payment/method/credit"))),
@@ -411,67 +379,33 @@ function uc_stripe_order_pane_stripe($op, $order, &$form = NULL, &$form_state = 
  */
 function uc_stripe_settings_form() {
   $config = config('uc_stripe.settings');
+  $form['#config'] = 'uc_stripe.settings';
   $form['uc_stripe_settings'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Stripe settings'),
+    '#title' => t('Ubercart Stripe settings'),
   );
 
-  $form['uc_stripe_settings']['uc_stripe_api_key_test_secret'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Test Secret Key'),
-    '#default_value' => $config->get('uc_stripe_api_key_test_secret'),
-    '#description' => t('Your Development Stripe API Key. Must be the "secret" key, not the "publishable" one.'),
-  );
-
-  $form['uc_stripe_settings']['uc_stripe_api_key_test_publishable'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Test Publishable Key'),
-    '#default_value' => $config->get('uc_stripe_api_key_test_publishable'),
-    '#description' => t('Your Development Stripe API Key. Must be the "publishable" key, not the "secret" one.'),
-  );
-
-  $form['uc_stripe_settings']['uc_stripe_api_key_live_secret'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Live Secret Key'),
-    '#default_value' => $config->get('uc_stripe_api_key_live_secret'),
-    '#description' => t('Your Live Stripe API Key. Must be the "secret" key, not the "publishable" one.'),
-  );
-
-  $form['uc_stripe_settings']['uc_stripe_api_key_live_publishable'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Live Publishable Key'),
-    '#default_value' => $config->get('uc_stripe_api_key_live_publishable'),
-    '#description' => t('Your Live Stripe API Key. Must be the "publishable" key, not the "secret" one.'),
-  );
-
-  $form['uc_stripe_settings']['uc_stripe_element_styles'] = array(
+  $form['uc_stripe_settings']['element_styles'] = array(
     '#type' => 'textfield',
     '#title' => t('Style Settings for Stripe Card Element'),
     '#description' => t('Enter your style settings. e.g. fontSize: 1em, color: black, iconColor: blue (See all Stripe <a target="_blank" href="https://stripe.com/docs/stripe-js/reference#element-options">style options</a>)'),
-    '#default_value' => $config->get('uc_stripe_element_styles'),
+    '#default_value' => $config->get('element_styles'),
   );
 
   $email_text = _uc_stripe_get_authentication_required_email_text();
 
-  $form['uc_stripe_settings']['uc_stripe_authentication_required_email'] = array(
+  $form['uc_stripe_settings']['authentication_required_email'] = array(
     '#type' => 'textarea',
     '#title' => t('Email for Recurring payment authentication'),
-    '#default_value' => $config->get('uc_stripe_authentication_required_email'),
+    '#default_value' => $config->get('authentication_required_email'),
     '#description' => t('If your site uses recurring payments, some transactions will require the customer to return to the site and authenticate before the subscrption payment can be processed.'),
   );
 
-  $form['uc_stripe_settings']['uc_stripe_testmode'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Test mode'),
-    '#description' => 'Testing Mode: Stripe will use the development API key to process the transaction so the card will not actually be charged.',
-    '#default_value' => $config->get('uc_stripe_testmode'),
-  );
-
-  $form['uc_stripe_settings']['uc_stripe_poweredby'] = array(
+  $form['uc_stripe_settings']['poweredby'] = array(
     '#type' => 'checkbox',
     '#title' => t('Powered by Stripe'),
     '#description' => 'Show "powered by Stripe" in checkout.',
-    '#default_value' => $config->get('uc_stripe_poweredby'),
+    '#default_value' => $config->get('poweredby'),
   );
 
   return $form;
@@ -496,27 +430,16 @@ function uc_stripe_form_uc_payment_method_settings_form_alter(&$form, &$form_sta
  * @param $form_state
  */
 function uc_stripe_settings_form_validate($form, &$form_state) {
-  $elements = array('uc_stripe_api_key_test_secret', 'uc_stripe_api_key_test_publishable', 'uc_stripe_api_key_live_secret', 'uc_stripe_api_key_live_publishable');
-
-  if ($form_state['values']['uc_pg_uc_stripe_enabled']) {
-    foreach ($elements as $element_name) {
-      $form_state['values'][$element_name] = _uc_stripe_sanitize_key($form_state['values'][$element_name]);
-      if (!_uc_stripe_validate_key($form_state['values'][$element_name])) {
-        form_set_error($element_name, t('@name does not appear to be a valid stripe key', array('@name' => $element_name)));
-      }
-    }
-  }
-
   // Make sure they haven't tried to validate credit card numbers, as uc_stripe will not provide a real one.
   if (!empty($form_state['values']['uc_credit_validate_numbers'])) {
     form_set_error('uc_credit_validate_numbers', t('When used with Ubercart Stripe, "Validate credit card number at checkout" must be unchecked.'));
   }
 
   // Make sure that stripe style settings do not have an extra comma at the end.
-  $element_styles = $form_state['values']['uc_stripe_element_styles'];
+  $element_styles = $form_state['values']['element_styles'];
   if (!empty($element_styles)) {
     if (substr($element_styles, -1) == ',') {
-      form_set_error('uc_stripe_element_styles', t('Stripe Element Styles list should not end with a comma.'));
+      form_set_error('element_styles', t('Stripe Element Styles list should not end with a comma.'));
     }
   }
 
@@ -657,11 +580,11 @@ function uc_stripe_charge($order_id, $amount, $data) {
 
     if (!empty($shipping_info)) {
       $params['shipping'] = $shipping_info;
-      Stripe PaymentIntent::update($intent_id, ['shipping' $shipping_info]);
+      \Stripe\PaymentIntent::update($intent_id, ['shipping' => $shipping_info]);
     }
 
     // charge the Customer the amount in the order
-    $payment_intent = Stripe PaymentIntent::retrieve($intent_id);
+    $payment_intent = \Stripe\PaymentIntent::retrieve($intent_id);
 
     if ($payment_intent->status != 'succeeded') {
       throw new Exception($payment_intent['last_payment_error']['message']);
@@ -774,7 +697,7 @@ function uc_stripe_renew($order, &$fee) {
     //Allow other modules to alter recurring $intent params array
     backdrop_alter('uc_stripe_recurring_intent', $intent_params, $order);
 
-    $payment_intent = Stripe PaymentIntent::create($intent_params, ['idempotency_key' $idempotency_key]);
+    $payment_intent = \Stripe\PaymentIntent::create($intent_params, ['idempotency_key' => $idempotency_key]);
 
     uc_payment_enter($order->order_id, $order->payment_method, $order->order_total, $fee->uid, $payment_intent, "Success");
 
@@ -785,7 +708,7 @@ function uc_stripe_renew($order, &$fee) {
     return TRUE;
 
   }
-  catch (Stripe Error Card $e) {
+  catch (\Stripe\Error\Card $e) {
 
     if ($e->getDeclineCode() === 'authentication_required') {
       $NOT_COMPLETED = 0;
@@ -799,7 +722,7 @@ function uc_stripe_renew($order, &$fee) {
       ))->execute();
 
       // Prepare email to alert user that authentication is required.
-      $params['body'] = config_get('uc_stripe.settings', 'uc_stripe_authentication_required_email');
+      $params['body'] = config_get('uc_stripe.settings', 'authentication_required_email');
       $params['user'] = user_load($order->uid);
       $params['hash'] = $hash;
       backdrop_mail('uc_stripe', 'authentication_required', $params['user']->mail, language_default(), $params);
@@ -868,23 +791,16 @@ function uc_stripe_cancel($order, $op) {
  * @return bool
  */
 function _uc_stripe_prepare_api() {
-  $config = config('uc_stripe.settings');
-
   module_load_include('install', 'uc_stripe');
   if (!_uc_stripe_load_library()) {
     return FALSE;
   }
 
-  if (!_uc_stripe_check_api_keys()) {
-    watchdog('uc_stripe', 'Stripe API keys are not configured. Payments cannot be made without them.', array(), WATCHDOG_ERROR);
-    return FALSE;
-  }
-
-  $secret_key = $config->get('uc_stripe_testmode') ? $config->get('uc_stripe_api_key_test_secret') : $config->get('uc_stripe_api_key_live_secret');
+  $secret_key = stripe_get_secret_key();
   try {
-    $library = libraries_load('stripe');
-    Stripe Stripe::setApiKey($secret_key);
-    Stripe Stripe::setApiVersion($library['stripe_api_version']);
+    stripe_load_library();
+    \Stripe\Stripe::setApiKey($secret_key);
+    \Stripe\Stripe::setApiVersion(UC_STRIPE_API_VERSION);
   }
   catch (Exception $e) {
     watchdog('uc_stripe', 'Error setting the Stripe API Key. Payments will not be processed: %error', array('%error' => $e->getMessage()));
@@ -892,26 +808,12 @@ function _uc_stripe_prepare_api() {
   try {
     $module_info = system_get_info('module', "uc_stripe");
     $uc_stripe_version = is_null($module_info['version']) ? 'dev-unknown' : $module_info['version'];
-    Stripe Stripe::setAppInfo("Backdrop Ubercart Stripe", $uc_stripe_version, "https://www.drupal.org/project/uc_stripe");
+    \Stripe\Stripe::setAppInfo("Backdrop Ubercart Stripe", $uc_stripe_version, "https://www.drupal.org/project/uc_stripe");
   }
   catch (Exception $e) {
     watchdog('uc_stripe', 'Error setting Stripe plugin information: %error', array('%error' => $e->getMessage()));
   }
   return TRUE;
-}
-
-/**
- * Check that all API keys are configured.
- *
- * @return bool
- *   TRUE if all 4 keys have a value.
- */
-function _uc_stripe_check_api_keys() {
-  $config = config('uc_stripe.settings');
-  return ($config->get('uc_stripe_api_key_live_publishable') &&
-    $config->get('uc_stripe_api_key_live_secret') &&
-    $config->get('uc_stripe_api_key_test_publishable') &&
-    $config->get('uc_stripe_api_key_test_secret'));
 }
 
 /**
@@ -980,20 +882,20 @@ function _generatePaymentResponse($intent) {
   if ($intent->status == 'requires_action' &&
       $intent->next_action->type == 'use_stripe_sdk') {
     # Tell the client to handle the action
-    $response =[
-            'requires_action' true
-            'payment_intent_client_secret' $intent->client_secret
+    $response = [
+            'requires_action' => true,
+            'payment_intent_client_secret' => $intent->client_secret
         ];
   }
   else if ($intent->status == 'succeeded') {
     # The payment didn’t need any additional actions and completed!
     # Handle post-payment fulfillment
-    $response =['success' true];
+    $response = ['success' => true];
   }
   else {
     # Invalid status
     http_response_code(500);
-    $response =['error' 'Invalid PaymentIntent status'];
+    $response = ['error' => 'Invalid PaymentIntent status'];
   }
 
   return $response;
@@ -1020,7 +922,7 @@ function _uc_stripe_confirm_payment() {
     $message = 'Stripe API not found.';
 
     watchdog('uc_stripe', 'Error in Stripe API: @message', array('@message' => $message));
-    return ['error' $message];
+    return ['error' => $message];
   }
   // Format the amount in cents, which is what Stripe wants
   $amount = uc_currency_format($order->order_total, FALSE, FALSE, FALSE);
@@ -1069,7 +971,7 @@ function _uc_stripe_confirm_payment() {
         $customer = _uc_stripe_create_stripe_customer($order, $payment_method_id);
         if (!$customer) {
           $message = 'Customer creation failed.';
-          return ['error' $message];
+          return ['error' => $message];
         }
         $stripe_customer_id = $customer->id;
       }
@@ -1083,7 +985,7 @@ function _uc_stripe_confirm_payment() {
       backdrop_alter('uc_stripe_payment_intent', $params, $order);
 
       # Create the PaymentIntent
-      $intent = Stripe PaymentIntent::create($params, ['idempotency_key' $idempotency_key]);
+      $intent = \Stripe\PaymentIntent::create($params, ['idempotency_key' => $idempotency_key]);
 
       if (!$order_has_stripe_id) {
         $order->data['stripe_customer_id'] = $stripe_customer_id;
@@ -1093,7 +995,7 @@ function _uc_stripe_confirm_payment() {
       uc_order_save($order);
     }
     if (isset($data['payment_intent_id'])) {
-      $intent = Stripe PaymentIntent::retrieve(
+      $intent = \Stripe\PaymentIntent::retrieve(
           $data['payment_intent_id']
           );
       $intent->confirm();
@@ -1105,7 +1007,7 @@ function _uc_stripe_confirm_payment() {
   }
   catch (Exception $e) {
     watchdog('uc_stripe', 'Payment could not be processed: @message', array('@message' => $e->getMessage()));
-    return ['error' $e->getMessage()];
+    return ['error' => $e->getMessage()];
   }
 }
 
@@ -1146,7 +1048,7 @@ function _uc_stripe_create_stripe_customer($order, $payment_method_id = NULL) {
       $params['shipping'] = $shipping_info;
     }
     //Create the customer in stripe
-    $customer = Stripe Customer::create($params);
+    $customer = \Stripe\Customer::create($params);
 
     return $customer;
 
@@ -1182,7 +1084,7 @@ function _uc_stripe_is_stripe_id_valid($stripe_id) {
       return false;
     }
 
-    $customer = Stripe Customer::retrieve($stripe_id);
+    $customer = \Stripe\Customer::retrieve($stripe_id);
 
     // Count deleted stripe customers as invalid
     return !$customer->deleted;
@@ -1202,7 +1104,7 @@ function _uc_stripe_is_stripe_id_valid($stripe_id) {
 function _uc_stripe_get_element_styles_array() {
 
   $styles = array();
-  $settings = config_get('uc_stripe.settings', 'uc_stripe_element_styles');
+  $settings = config_get('uc_stripe.settings', 'element_styles');
 
   $pairs = explode(',', $settings);
   foreach ($pairs as $pair) {
