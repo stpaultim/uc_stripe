@@ -63,9 +63,7 @@
         }
         
      // Custom styling can be passed to options when creating an Element.
-        var style = {
-          base: elementStyles
-        };
+        var style = elementStyles;
         
         // Create an instance of the card Element.
         var card = elements.create('card', {style: style});

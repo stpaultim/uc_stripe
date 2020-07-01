@@ -10,6 +10,16 @@
  */
 
 /**
+ * Settings value for basic stripe styles.
+ */
+define('UC_STRIPE_BASIC_STYLES', 0);
+
+/**
+ * Settings value for advanced stripe styles.
+ */
+define('UC_STRIPE_ADVANCED_STYLES', 1);
+
+/**
  * Implements hook_libraries_info() to define what files should be loaded.
  *
  * @return mixed
@@ -209,7 +219,18 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
 
   $apikey = variable_get('uc_stripe_testmode', TRUE) ? check_plain(variable_get('uc_stripe_api_key_test_publishable', '')) : check_plain(variable_get('uc_stripe_api_key_live_publishable', ''));
 
-  $element_styles = json_encode(_uc_stripe_get_element_styles_array());
+  // Retrieve the basic or advanced styling to pass to uc_stripe.js
+  if (variable_get('uc_stripe_element_styles_mode', UC_STRIPE_BASIC_STYLES) == UC_STRIPE_ADVANCED_STYLES) {
+    $element_styles = variable_get('uc_stripe_element_styles_json', '{}');
+  } else {
+    // Simple style string needs to be JSON encoded first.
+    $element_styles = variable_get('uc_stripe_element_styles', 'fontSize: 16px, color: black, iconColor: blue');
+    if (!empty($element_styles)) {
+      $element_styles = '{"base":' . json_encode(_uc_stripe_get_element_styles_array()) . '}';
+    } else {
+      $element_styles = '{}';
+    }
+  }
 
   // Add custom JS and CSS
   $settings = array('apikey' => $apikey, 'element_styles' => $element_styles);
@@ -413,11 +434,39 @@ function uc_stripe_settings_form() {
     '#description' => t('Your Live Stripe API Key. Must be the "publishable" key, not the "secret" one.'),
   );
 
+  $form['uc_stripe_settings']['uc_stripe_element_styles_mode'] = array(
+    '#type' => 'radios',
+    '#title' => t('Basic / Advanced Stripe Card Element Styling'),
+      '#options' => array(
+          UC_STRIPE_BASIC_STYLES => t('Basic'),
+          UC_STRIPE_ADVANCED_STYLES => t('Advanced'),
+      ),
+    '#default_value' => variable_get('uc_stripe_element_styles_mode', UC_STRIPE_BASIC_STYLES),
+    '#description' => t('Basic styling allows simple modifications while advanced allows greater customization.'),
+  );
+
   $form['uc_stripe_settings']['uc_stripe_element_styles'] = array(
     '#type' => 'textfield',
-    '#title' => t('Style Settings for Stripe Card Element'),
-    '#description' => t('Enter your style settings. e.g. fontSize: 1em, color: black, iconColor: blue (See all Stripe <a target="_blank" href="https://stripe.com/docs/stripe-js/reference#element-options">style options</a>)'),
-    '#default_value' => variable_get('uc_stripe_element_styles', 'fontSize: 1em, color: black, iconColor: blue'),
+    '#title' => t('Style Settings for Stripe Card Element (Basic)'),
+    '#description' => t('Enter your style settings as a simple comma-separated list (no quoted commas or pseudo-elements allowed). Example: fontSize: 16px, color: black, iconColor: blue (These styles modify the Stripe "base" styles, see <a target="_blank" href="@stripe-documentation">Stripe documentation</a>)', array('@stripe-documentation' => 'https://stripe.com/docs/js/appendix/style')),
+    '#default_value' => variable_get('uc_stripe_element_styles', 'fontSize: 16px, color: black, iconColor: blue'),
+    '#states' => array(
+      'visible' => array(
+          ':input[name="uc_stripe_element_styles_mode"]' => array('value' => UC_STRIPE_BASIC_STYLES),
+      ),
+    ),
+  );
+
+  $form['uc_stripe_settings']['uc_stripe_element_styles_json'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Style Settings for Stripe Card Element (Advanced)'),
+      '#description' => t('Enter a value for the "style" element as a valid JSON-encoded string. Example: {"base":{"fontFamily":"Roboto, Open Sans, Segoe UI, sans-serif","fontSize":"16px","color":"#333333","iconColor":"blue","::placeholder":{"color":"#333333"}}}. Newlines and whitespace are allowed. See <a target="_blank" href="@stripe-documentation">Stripe documentation</a> for all variants.', array('@stripe-documentation' => 'https://stripe.com/docs/js/appendix/style')),
+    '#default_value' => variable_get('uc_stripe_element_styles_json', '{}'),
+    '#states' => array(
+      'visible' => array(
+          ':input[name="uc_stripe_element_styles_mode"]' => array('value' => UC_STRIPE_ADVANCED_STYLES),
+      ),
+    ),
   );
 
   $email_text = _uc_stripe_get_authentication_required_email_text();
@@ -481,14 +530,27 @@ function uc_stripe_settings_form_validate($form, &$form_state) {
     form_set_error('uc_credit_validate_numbers', t('When used with Ubercart Stripe, "Validate credit card number at checkout" must be unchecked.'));
   }
 
-  // Make sure that stripe style settings do not have an extra comma at the end.
-  $element_styles = $form_state['values']['uc_stripe_element_styles'];
-  if(!empty($element_styles)){
-    if(substr($element_styles, -1) == ','){
-      form_set_error('uc_stripe_element_styles', t('Stripe Element Styles list should not end with a comma.'));
+  // Validate advanced or basic styling.
+  if ($form_state['values']['uc_stripe_element_styles_mode']) {
+    // Advanced - Validate JSON-encoded style settings.
+      $element_styles = $form_state['values']['uc_stripe_element_styles_json'];
+      if (empty($element_styles)) {
+        form_set_error('uc_stripe_element_styles_json', t('Empty Style Settings for Stripe Card Element (Advanced) is not a valid JSON. Set to {} or switch off Advanced styling.'));
+      } else {
+        json_decode($element_styles);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+          form_set_error('uc_stripe_element_styles_json', t('Style Settings for Stripe Card Element (Advanced) JSON does not validate:') . ' ' . json_last_error_msg());
+        }
+      }
+  } else {
+    // Basic - Make sure that stripe style settings do not have an extra comma at the end.
+    $element_styles = $form_state['values']['uc_stripe_element_styles'];
+    if(!empty($element_styles)){
+      if(substr($element_styles, -1) == ','){
+        form_set_error('uc_stripe_element_styles', t('Stripe Element Styles list should not end with a comma.'));
+      }
     }
   }
-
 }
 
 /**
@@ -1159,7 +1221,7 @@ function _uc_stripe_is_stripe_id_valid($stripe_id){
 function _uc_stripe_get_element_styles_array(){
 
   $styles = array();
-  $settings = variable_get('uc_stripe_element_styles', 'fontSize: 1em, color: black, iconColor: blue');
+  $settings = variable_get('uc_stripe_element_styles', 'fontSize: 16px, color: black, iconColor: blue');
 
   $pairs = explode(',', $settings);
   foreach ($pairs as $pair){

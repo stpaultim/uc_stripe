@@ -97,6 +97,9 @@ function uc_stripe_install() {
  */
 function uc_stripe_uninstall() {
   variable_del('uc_stripe_authentication_required_email');
+  variable_del('uc_stripe_element_styles');
+  variable_del('uc_stripe_element_styles_json');
+  variable_del('uc_stripe_element_styles_mode');
 }
 
 /**
