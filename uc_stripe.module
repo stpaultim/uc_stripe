@@ -492,6 +492,20 @@ function uc_stripe_settings_form() {
     '#default_value' => variable_get('uc_stripe_poweredby', FALSE),
   );
 
+  $form['uc_stripe_settings']['uc_stripe_metadata_titles'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Metadata: Title'),
+    '#description' => t('Include order item title(s) in Stripe metadata.'),
+    '#default_value' => variable_get('uc_stripe_metadata_titles', FALSE),
+  );
+
+  $form['uc_stripe_settings']['uc_stripe_metadata_models'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Metadata: Model'),
+    '#description' => t('Include item model(s) (SKU(s)) in Stripe metadata.'),
+    '#default_value' => variable_get('uc_stripe_metadata_models', FALSE),
+  );
+
   return $form;
 }
 
@@ -679,6 +693,7 @@ function uc_stripe_charge($order_id, $amount, $data) {
       "currency" => strtolower($order->currency),
       "customer" => $stripe_customer_id,
       "description" => t("Order #@order_id", array("@order_id" => $order_id)),
+      "metadata" => get_order_metadata($order),
       "payment_method" => $stripe_payment_method_id,
       "payment_method_types" => ['card'],
       "confirm" => true,
@@ -1079,6 +1094,7 @@ function _uc_stripe_confirm_payment(){
       $params = array(
           'payment_method' => $payment_method_id,
           "description" => t("Order #@order_id", array("@order_id" => $order_id)),
+          "metadata" => get_order_metadata($order),
           'amount' => $amount,
           'currency' => strtolower($order->currency),
           'confirmation_method' => 'manual',
@@ -1185,6 +1201,26 @@ function _uc_stripe_create_stripe_customer($order, $payment_method_id = NULL){
   }
 
 }
+
+function get_order_metadata($order){
+  //Get item titles and models
+  foreach($order->products as $item){
+    $titles[] = $item->title;
+    $models[] = $item->model;
+    }
+  $metadata = array();
+
+  if (variable_get('uc_stripe_metadata_models', FALSE) && ! empty($models)) {
+    $metadata['models'] = implode(";", $models);
+  }
+
+  if (variable_get('uc_stripe_metadata_titles', FALSE) && ! empty($titles)) {
+    $metadata['titles'] = implode(";", $titles);
+  }
+
+  return $metadata;
+}
+
 
 /**
  *
