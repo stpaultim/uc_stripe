@@ -1210,11 +1210,11 @@ function get_order_metadata($order){
     }
   $metadata = array();
 
-  if (variable_get('uc_stripe_metadata_models', FALSE) && ! empty($models)) {
+  if (variable_get('uc_stripe_metadata_models', FALSE) && !empty($models)) {
     $metadata['models'] = implode(";", $models);
   }
 
-  if (variable_get('uc_stripe_metadata_titles', FALSE) && ! empty($titles)) {
+  if (variable_get('uc_stripe_metadata_titles', FALSE) && !empty($titles)) {
     $metadata['titles'] = implode(";", $titles);
   }
 
