@@ -38,7 +38,7 @@ Bugs and Feature requests should be reported in the [Issue Queue](https://github
 
 - Ported to Backdrop by [Laryn Kragt Bakker](https://github.com/laryn), [CEDC.org](https://CEDC.org)
 - Maintained for Drupal by [Gregorio Magini](https://www.drupal.org/u/peterpoe)
-- Earlier versions of `uc_stripe` were based on (Bitcookie's work)[http://bitcookie.com/blog/pci-compliant-ubercart-and-stripe-js] from [discussion in the D7 `uc_stripe` issue queue](https://www.drupal.org/node/1467886).
+- Earlier versions of `uc_stripe` were based on [Bitcookie's work](http://bitcookie.com/blog/pci-compliant-ubercart-and-stripe-js) from [discussion in the D7 `uc_stripe` issue queue](https://www.drupal.org/node/1467886).
 
 ## License
 
