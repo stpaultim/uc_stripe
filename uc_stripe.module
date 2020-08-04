@@ -11,9 +11,17 @@
  */
 
 /**
- * Implements hook_library_info() to define what files should be loaded.
- *
- * @return mixed
+ * Settings value for basic stripe styles.
+ */
+define('UC_STRIPE_BASIC_STYLES', 0);
+
+/**
+ * Settings value for advanced stripe styles.
+ */
+define('UC_STRIPE_ADVANCED_STYLES', 1);
+
+/**
+ * Stripe API version.
  */
  
 define('UC_STRIPE_API_VERSION', '2019-05-16');
@@ -90,9 +98,10 @@ function uc_stripe_recurring_info() {
  */
 function uc_stripe_config_info() {
   $prefixes['uc_stripe.settings'] = array(
-    'label' => t('Module name settings'),
+    'label' => t('Ubercart Stripe settings'),
     'group' => t('Configuration'),
   );
+  return $prefixes;
 }
 
 /**
@@ -201,7 +210,20 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
   }
   $form['actions']['continue']['#attributes']['disabled'] = 'disabled';
 
-  $element_styles = json_encode(_uc_stripe_get_element_styles_array());
+  $apikey = stripe_get_public_key();
+
+  // Retrieve the basic or advanced styling to pass to uc_stripe.js
+  if ($config->get('element_styles_mode') == UC_STRIPE_ADVANCED_STYLES) {
+    $element_styles = $config->get('element_styles_json');
+  } else {
+    // Simple style string needs to be JSON encoded first.
+    $element_styles = $config->get('element_styles');
+    if (!empty($element_styles)) {
+      $element_styles = '{"base":' . json_encode(_uc_stripe_get_element_styles_array()) . '}';
+    } else {
+      $element_styles = '{}';
+    }
+  }
 
   // Add custom JS and CSS
   $settings = array(
@@ -385,11 +407,39 @@ function uc_stripe_settings_form() {
     '#title' => t('Ubercart Stripe settings'),
   );
 
+  $form['uc_stripe_settings']['element_styles_mode'] = array(
+    '#type' => 'radios',
+    '#title' => t('Basic / Advanced Stripe Card Element Styling'),
+      '#options' => array(
+          UC_STRIPE_BASIC_STYLES => t('Basic'),
+          UC_STRIPE_ADVANCED_STYLES => t('Advanced'),
+      ),
+    '#default_value' => $config->get('element_styles_mode'),
+    '#description' => t('Basic styling allows simple modifications while advanced allows greater customization.'),
+  );
+
   $form['uc_stripe_settings']['element_styles'] = array(
     '#type' => 'textfield',
-    '#title' => t('Style Settings for Stripe Card Element'),
-    '#description' => t('Enter your style settings. e.g. fontSize: 1em, color: black, iconColor: blue (See all Stripe <a target="_blank" href="https://stripe.com/docs/stripe-js/reference#element-options">style options</a>)'),
+    '#title' => t('Style Settings for Stripe Card Element (Basic)'),
+    '#description' => t('Enter your style settings as a simple comma-separated list (no quoted commas or pseudo-elements allowed). Example: fontSize: 16px, color: black, iconColor: blue (These styles modify the Stripe "base" styles, see <a target="_blank" href="@stripe-documentation">Stripe documentation</a>)', array('@stripe-documentation' => 'https://stripe.com/docs/js/appendix/style')),
     '#default_value' => $config->get('element_styles'),
+    '#states' => array(
+      'visible' => array(
+          ':input[name="element_styles_mode"]' => array('value' => UC_STRIPE_BASIC_STYLES),
+      ),
+    ),
+  );
+
+  $form['uc_stripe_settings']['element_styles_json'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Style Settings for Stripe Card Element (Advanced)'),
+      '#description' => t('Enter a value for the "style" element as a valid JSON-encoded string. Example: {"base":{"fontFamily":"Roboto, Open Sans, Segoe UI, sans-serif","fontSize":"16px","color":"#333333","iconColor":"blue","::placeholder":{"color":"#333333"}}}. Newlines and whitespace are allowed. See <a target="_blank" href="@stripe-documentation">Stripe documentation</a> for all variants.', array('@stripe-documentation' => 'https://stripe.com/docs/js/appendix/style')),
+    '#default_value' => $config->get('element_styles_json'),
+    '#states' => array(
+      'visible' => array(
+          ':input[name="element_styles_mode"]' => array('value' => UC_STRIPE_ADVANCED_STYLES),
+      ),
+    ),
   );
 
   $email_text = _uc_stripe_get_authentication_required_email_text();
@@ -406,6 +456,20 @@ function uc_stripe_settings_form() {
     '#title' => t('Powered by Stripe'),
     '#description' => 'Show "powered by Stripe" in checkout.',
     '#default_value' => $config->get('poweredby'),
+  );
+
+  $form['uc_stripe_settings']['metadata_titles'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Metadata: Title'),
+    '#description' => t('Include order item title(s) in Stripe metadata.'),
+    '#default_value' => $config->get('metadata_titles'),
+  );
+
+  $form['uc_stripe_settings']['metadata_models'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Metadata: Model'),
+    '#description' => t('Include item model(s) (SKU(s)) in Stripe metadata.'),
+    '#default_value' => $config->get('metadata_models'),
   );
 
   return $form;
@@ -435,14 +499,27 @@ function uc_stripe_settings_form_validate($form, &$form_state) {
     form_set_error('uc_credit_validate_numbers', t('When used with Ubercart Stripe, "Validate credit card number at checkout" must be unchecked.'));
   }
 
-  // Make sure that stripe style settings do not have an extra comma at the end.
-  $element_styles = $form_state['values']['element_styles'];
-  if (!empty($element_styles)) {
-    if (substr($element_styles, -1) == ',') {
-      form_set_error('element_styles', t('Stripe Element Styles list should not end with a comma.'));
+  // Validate advanced or basic styling.
+  if ($form_state['values']['element_styles_mode']) {
+    // Advanced - Validate JSON-encoded style settings.
+      $element_styles = $form_state['values']['element_styles_json'];
+      if (empty($element_styles)) {
+        form_set_error('element_styles_json', t('Empty Style Settings for Stripe Card Element (Advanced) is not a valid JSON. Set to {} or switch off Advanced styling.'));
+      } else {
+        json_decode($element_styles);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+          form_set_error('element_styles_json', t('Style Settings for Stripe Card Element (Advanced) JSON does not validate:') . ' ' . json_last_error_msg());
+        }
+      }
+  } else {
+    // Basic - Make sure that stripe style settings do not have an extra comma at the end.
+    $element_styles = $form_state['values']['element_styles'];
+    if(!empty($element_styles)){
+      if(substr($element_styles, -1) == ','){
+        form_set_error('element_styles', t('Stripe Element Styles list should not end with a comma.'));
+      }
     }
   }
-
 }
 
 /**
@@ -571,6 +648,7 @@ function uc_stripe_charge($order_id, $amount, $data) {
       "currency" => strtolower($order->currency),
       "customer" => $stripe_customer_id,
       "description" => t("Order #@order_id", array("@order_id" => $order_id)),
+      "metadata" => get_order_metadata($order),
       "payment_method" => $stripe_payment_method_id,
       "payment_method_types" => ['card'],
       "confirm" => true,
@@ -957,14 +1035,15 @@ function _uc_stripe_confirm_payment() {
       $payment_method_id = $data['payment_method_id'];
 
       $params = array(
-        'payment_method' => $payment_method_id,
-        "description" => t("Order #@order_id", array("@order_id" => $order_id)),
-        'amount' => $amount,
-        'currency' => strtolower($order->currency),
-        'confirmation_method' => 'manual',
-        'confirm' => true,
-        'setup_future_usage' => 'off_session',
-        'save_payment_method' => true,
+          'payment_method' => $payment_method_id,
+          "description" => t("Order #@order_id", array("@order_id" => $order_id)),
+          "metadata" => get_order_metadata($order),
+          'amount' => $amount,
+          'currency' => strtolower($order->currency),
+          'confirmation_method' => 'manual',
+          'confirm' => true,
+          'setup_future_usage' => 'off_session',
+          'save_payment_method' => true,
       );
 
       if (!$stripe_customer_id) {
@@ -1067,6 +1146,27 @@ function _uc_stripe_create_stripe_customer($order, $payment_method_id = NULL) {
   }
 
 }
+
+function get_order_metadata($order){
+  $config = config('uc_stripe.settings');
+  //Get item titles and models
+  foreach($order->products as $item){
+    $titles[] = $item->title;
+    $models[] = $item->model;
+    }
+  $metadata = array();
+
+  if ($config->get('metadata_models') && !empty($models)) {
+    $metadata['models'] = implode(";", $models);
+  }
+
+  if ($config->get('metadata_titles') && !empty($titles)) {
+    $metadata['titles'] = implode(";", $titles);
+  }
+
+  return $metadata;
+}
+
 
 /**
  *

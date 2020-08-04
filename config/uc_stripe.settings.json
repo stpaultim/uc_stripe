@@ -1,6 +1,11 @@
 {
     "_config_name": "uc_stripe.settings",
-    "poweredby": false,
-    "element_styles": "",
-    "authentication_required_email": ""
+    "poweredby": 0,
+    "element_styles": "fontSize: 16px, color: black, iconColor: blue",
+    "authentication_required_email": "",
+    "uc_pg_uc_stripe_cc_txn_type": "auth_capture",
+    "element_styles_mode": 0,
+    "element_styles_json": "{}",
+    "metadata_titles": 1,
+    "metadata_models": 1
 }

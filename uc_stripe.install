@@ -178,8 +178,9 @@ function uc_stripe_update_last_removed() {
 function uc_stripe_update_1000() {
   $config = config('uc_stripe.settings');
   $config->set('poweredby', update_variable_get('uc_stripe_poweredby', FALSE));
-  $config->set('element_styles', update_variable_get('uc_stripe_element_styles', ''));
+  $config->set('element_styles', update_variable_get('uc_stripe_element_styles', 'fontSize: 16px, color: black, iconColor: blue'));
   $config->set('authentication_required_email', update_variable_get('uc_stripe_authentication_required_email', ''));
+  $config->save();
   update_variable_del('uc_stripe_testmode');
   update_variable_del('uc_stripe_api_key_test_publishable');
   update_variable_del('uc_stripe_api_key_live_publishable');
@@ -189,3 +190,20 @@ function uc_stripe_update_1000() {
   update_variable_del('uc_stripe_element_styles');
   update_variable_del('uc_stripe_authentication_required_email');
 }
+
+/**
+ * Implements hook_update_N().
+ */
+function uc_stripe_update_1001() {
+  $config = config('uc_stripe.settings');
+  $config->set('element_styles_mode', update_variable_get('uc_stripe_element_styles_mode', UC_STRIPE_BASIC_STYLES));
+  $config->set('element_styles_json', update_variable_get('uc_stripe_element_styles_json', '{}'));
+  $config->set('metadata_titles', update_variable_get('uc_stripe_metadata_titles', false));
+  $config->set('metadata_models', update_variable_get('uc_stripe_metadata_models', false));
+  $config->save();
+  update_variable_del('uc_stripe_element_styles_mode');
+  update_variable_del('uc_stripe_element_styles_json');
+  update_variable_del('uc_stripe_metadata_titles');
+  update_variable_del('uc_stripe_metadata_models');
+}
+
