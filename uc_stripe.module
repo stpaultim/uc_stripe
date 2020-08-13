@@ -284,12 +284,12 @@ function uc_stripe_form_uc_cart_checkout_form_alter(&$form, &$form_state) {
 
 
 /**
- * Implements hook_order_pane to provide the stripe customer info().
+ * Implements hook_uc_order_pane to provide the stripe customer info().
  *
  * @return array
  */
 function uc_stripe_uc_order_pane() {
-  $panes[] = array(
+  $panes['uc_stripe'] = array(
     'id' => 'uc_stripe',
     'callback' => 'uc_stripe_order_pane_stripe',
     'title' => t('Stripe Customer Info'),
@@ -365,8 +365,10 @@ function uc_stripe_uc_checkout_complete($order, $account) {
     $stripe_customer_id = $order->data['stripe_customer_id'];
 
     $loaded_user = user_load($account->uid);
-    user_save($loaded_user, array('data' => array('uc_stripe_customer_id' => $stripe_customer_id)));
-    user_save($loaded_user, array('data' => array('uc_stripe_payment_id' => $stripe_payment_id)));
+    $loaded_user->data['uc_stripe_customer_id'] = $stripe_customer_id;
+    $loaded_user->data['uc_stripe_payment_id'] = $stripe_payment_id;
+
+    user_save($loaded_user);
   }
 }
 
@@ -762,7 +764,7 @@ function uc_stripe_renew($order, &$fee) {
     );
 
     // Payment methods added with Stripe PaymentIntent API will be saved to customer
-    // object in backdrop. Payment cards saved with 2.x tokens will not have a value
+    // object in Backdrop. Payment cards saved with 2.x tokens will not have a value
     // saved to customer object, but the payment Intent will still continue because
     // Stipe will use default payment in those situations.
     if ($stripe_payment_id) {
@@ -886,7 +888,7 @@ function _uc_stripe_prepare_api() {
   try {
     $module_info = system_get_info('module', "uc_stripe");
     $uc_stripe_version = is_null($module_info['version']) ? 'dev-unknown' : $module_info['version'];
-    \Stripe\Stripe::setAppInfo("Backdrop Ubercart Stripe", $uc_stripe_version, "https://www.drupal.org/project/uc_stripe");
+    \Stripe\Stripe::setAppInfo("Backdrop Ubercart Stripe", $uc_stripe_version, "https://www.backdropcms.org/project/uc_stripe");
   }
   catch (Exception $e) {
     watchdog('uc_stripe', 'Error setting Stripe plugin information: %error', array('%error' => $e->getMessage()));
@@ -903,7 +905,6 @@ function _uc_stripe_prepare_api() {
 function _uc_stripe_get_customer_id($uid) {
 
   $account = user_load($uid);
-
   $id = !empty($account->data['uc_stripe_customer_id']) ? $account->data['uc_stripe_customer_id'] : FALSE;
   return $id;
 }
@@ -917,7 +918,6 @@ function _uc_stripe_get_customer_id($uid) {
 function _uc_stripe_get_payment_id($uid) {
 
   $account = user_load($uid);
-
   $id = !empty($account->data['uc_stripe_payment_id']) ? $account->data['uc_stripe_payment_id'] : FALSE;
   return $id;
 }
