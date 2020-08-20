@@ -51,7 +51,7 @@ function drush_uc_stripe_subscription_cancel($order_id = 'all') {
 
   $library = libraries_load('stripe');
   $info = libraries_info('stripe');
-  if (!$library['loaded'] || !array_key_exists(Stripe Stripe::VERSION, $info['versions'])) {
+  if (!$library['loaded'] || !array_key_exists(\Stripe\Stripe::VERSION, $info['versions'])) {
     drush_print("Failed to load one of the supported Stripe PHP library versions: " . join(', ', array_keys($info['versions'])));
     return;
   }
@@ -73,7 +73,7 @@ function drush_uc_stripe_subscription_cancel($order_id = 'all') {
     $account = user_load($item['uid']);
 
     try {
-      $customer = Stripe Customer::retrieve($item['customer_id']);
+      $customer = \Stripe\Customer::retrieve($item['customer_id']);
       $subscriptions = $customer->subscriptions->all();
     }
     catch (Exception $e) {
