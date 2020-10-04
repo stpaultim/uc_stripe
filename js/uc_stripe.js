@@ -11,7 +11,7 @@
       
       // Once function prevents stripe from reloading. Any dom changes to stripe area will destroy element
       // as a Stripe security feature
-      $('#uc-cart-checkout-form', context).once('uc_stripe', function(){
+      $('.uc-cart-checkout-form', context).once('uc_stripe', function(){
         
         var stripe_card_element = '#stripe-card-element';
         
