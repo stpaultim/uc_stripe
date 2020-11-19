@@ -486,7 +486,9 @@ function uc_stripe_settings_form() {
  * @param $form_state
  */
 function uc_stripe_form_uc_payment_method_settings_form_alter(&$form, &$form_state) {
-  $form['#validate'][] = 'uc_stripe_settings_form_validate';
+  if ($form_state['build_info']['args'][0] == 'credit') {
+    $form['#validate'][] = 'uc_stripe_settings_form_validate';
+  }
 }
 
 /**
