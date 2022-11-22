@@ -31,12 +31,13 @@ Bugs and Feature requests should be reported in the [Issue Queue](https://github
 
 # Current Maintainers
 
-- [Laryn Kragt Bakker](https://github.com/laryn), [CEDC.org](https://CEDC.org)
+- [Laryn Kragt Bakker](https://github.com/laryn)
 - Collaboration and co-maintainers welcome!
 
 ## Credits
 
-- Ported to Backdrop by [Laryn Kragt Bakker](https://github.com/laryn), [CEDC.org](https://CEDC.org)
+- Ported to Backdrop by [Laryn Kragt Bakker](https://github.com/laryn)
+- Backdrop port initially sponsored by [CEDC at the Stuart Center](https://stuartcenter.org/office/cedc)
 - Maintained for Drupal by [AndraeRay](https://www.drupal.org/u/andraeray)
 - Earlier versions of `uc_stripe` were developed by [Victor Quinn](http://drupal.org/user/367196) and [rfay](https://www.drupal.org/u/rfay), 
   and were also based in part on [Bitcookie's work](http://bitcookie.com/blog/pci-compliant-ubercart-and-stripe-js)
