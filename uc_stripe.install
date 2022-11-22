@@ -60,12 +60,12 @@ function uc_stripe_install() {
   if (module_exists('uc_recurring')) {
     // This turns ON the uc_recurring cron task to renew. We want this
     // ON because the renewal payments are handled by uc_recurring and NOT the stripe gateway
-    config_set('uc_recurring', 'trigger_renewals', TRUE);
+    config_set('uc_recurring.settings', 'trigger_renewals', TRUE);
   }
 
   // Stripe does cc validation, so uc_credit must not... especially because
   // uc_credit gets a bogus cc number.
-  config_set('uc_credit', 'uc_credit_validate_numbers', FALSE);
+  config_set('uc_credit.settings', 'uc_credit_validate_numbers', FALSE);
 }
 
 /**
