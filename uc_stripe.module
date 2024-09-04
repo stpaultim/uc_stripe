@@ -409,6 +409,11 @@ function uc_stripe_settings_form() {
     '#title' => t('Ubercart Stripe settings'),
   );
 
+  $form['uc_stripe_settings']['notice'] = array(
+    '#type' => 'markup',
+    '#markup' => '<div class="description"><strong>' . t("This module requires the Stripe Module. ") . '</strong>' . t("Be sure that the Stripe module has been configured at: 'admin/config/services/stripe'") . '</div>',
+  );
+
   $form['uc_stripe_settings']['element_styles_mode'] = array(
     '#type' => 'radios',
     '#title' => t('Basic / Advanced Stripe Card Element Styling'),

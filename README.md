@@ -20,6 +20,8 @@ It is compliant with 3D Secure, 3D Secure 2, and Strong Customer Authentication
 
 ## Configuration and Usage
 
+Configure the Stripe module at: `admin/config/services/stripe`
+
 After Ubercart and Stripe are installed and configured, activate this module and
 configure it in the Ubercart "Payment methods" section.
 
